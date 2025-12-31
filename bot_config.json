@@ -1,0 +1,90 @@
+{
+    "arena": {
+        "top_left": [
+            8,
+            94
+        ],
+        "top_right": [
+            418,
+            95
+        ],
+        "bottom_left": [
+            7,
+            654
+        ],
+        "bottom_right": [
+            421,
+            652
+        ]
+    },
+    "card_slots": {
+        "card_1": [
+            132,
+            824
+        ],
+        "card_2": [
+            215,
+            824
+        ],
+        "card_3": [
+            295,
+            824
+        ],
+        "card_4": [
+            377,
+            823
+        ]
+    },
+    "elixir": {
+        "top_left": [
+            144,
+            880
+        ],
+        "top_right": [
+            415,
+            880
+        ],
+        "bottom_left": [
+            144,
+            896
+        ],
+        "bottom_right": [
+            415,
+            896
+        ]
+    },
+    "window_pos": {
+        "top": 0,
+        "left": 0,
+        "width": 0,
+        "height": 0
+    },
+    "location": {
+        "defense_left": [
+            3,
+            30,
+            "s"
+        ],
+        "defense_right": [
+            15,
+            30,
+            "d"
+        ],
+        "bridge_left": [
+            3,
+            18,
+            "e"
+        ],
+        "bridge_right": [
+            15,
+            18,
+            "r"
+        ]
+    },
+    "window": {
+        "top": 124,
+        "left": 1474,
+        "width": 428,
+        "height": 908
+    }
+}
