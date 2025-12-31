@@ -69,7 +69,7 @@ class GameController:
         # Get the pixel coordinates of the card slot (Relative to game)
         card_x, card_y = screen_config[card_key]
         
-        print(f"Selecting {card_key}...")
+        # print(f"Selecting {card_key}...")
         self.click(card_x, card_y)
 
         # Small human delay
@@ -84,11 +84,11 @@ class GameController:
         # 1. Move mouse to target BUT DO NOT CLICK yet
         sx, sy = self._get_global_coords(field_x, field_y)
         if sx:
-            pyautogui.moveTo(sx, sy, duration=0.2)
+            pyautogui.moveTo(sx, sy, duration=random.uniform(0.15, 0.35))
             
         # 2. Wait for confirmation
-        print(f"⚠️  AIMING at {tile_target}. Press SPACE to Drop!")
-        keyboard.wait('space')
+        # print(f"⚠️  AIMING at {tile_target}. Press SPACE to Drop!")
+        # keyboard.wait('space')
         
         # 3. Small debounce so we don't accidentally trigger other things
         time.sleep(0.1) 

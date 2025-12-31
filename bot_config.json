@@ -61,29 +61,59 @@
     },
     "location": {
         "defense_left": [
-            3,
-            30,
+            5,
+            22,
             "s"
+        ],
+        "defense_middle": [
+            9,
+            21,
+            "d"
         ],
         "defense_right": [
             15,
             30,
-            "d"
+            "f"
         ],
         "bridge_left": [
             3,
-            18,
+            17,
+            "w"
+        ],
+        "bridge_middle": [
+            9,
+            17,
             "e"
         ],
         "bridge_right": [
             15,
-            18,
+            17,
             "r"
+        ],
+        "back_left": [
+            0,
+            30,
+            "z"
+        ],
+        "king_left": [
+            9,
+            30,
+            "x"
+        ],
+        "king_right": [
+            10,
+            30,
+            "c"
+        ],
+        "back_right": [
+            18,
+            30,
+            "v"
         ]
     },
     "window": {
-        "top": 124,
-        "left": 1474,
+        "top": 142,
+        "left": 1473,
         "width": 428,
         "height": 908
     }

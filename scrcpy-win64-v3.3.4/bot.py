@@ -4,6 +4,7 @@ import keyboard
 import time
 import json
 import os
+import threading  # <--- KEY CHANGE 1: Import threading module
 from window_capture import WindowCapture 
 from controls import GameController 
 
@@ -76,6 +77,9 @@ if __name__ == "__main__":
             pos_keys.append(trigger_key)
     
     selected_card = None
+    
+    # <--- KEY CHANGE 2: Added a state dictionary to track if a thread is busy
+    bot_state = {"is_acting": False}
 
     print(f"Configuration Loaded.")
     print("Card Keys: {card_keys}")
@@ -103,27 +107,16 @@ if __name__ == "__main__":
             cv2.line(frame, p1, p2, (255, 255, 255), 1)
 
         # 2. Draw Numbers (High Visibility Mode)
-        
-        # X-Axis (Bottom Edge)
         for x in range(0, arena_width + 1, 2):
             px, py = mapper.tile_to_pixel(x, arena_height)
-            # Draw slightly ABOVE the bottom line (py - 8) so it doesn't get cut off
             location = (px - 6, py - 8)
-            
-            # Black Outline (Thickness 3)
             cv2.putText(frame, str(x), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
-            # Cyan Text (Thickness 1)
             cv2.putText(frame, str(x), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
 
-        # Y-Axis (Left Edge)
         for y in range(0, arena_height + 1, 2):
             px, py = mapper.tile_to_pixel(0, y)
-            # Draw slightly to the RIGHT of the edge (px + 5)
             location = (px + 5, py + 5)
-            
-            # Black Outline
             cv2.putText(frame, str(y), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
-            # Cyan Text
             cv2.putText(frame, str(y), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
 
         # 3. Draw Card Slots
@@ -145,6 +138,10 @@ if __name__ == "__main__":
         fps = int(1 / (time.time() - loop_start + 0.001))
         cv2.putText(frame, f"FPS: {fps}", (10, 30), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        
+        # <--- KEY CHANGE 3: Status indicator for the user
+        if bot_state["is_acting"]:
+             cv2.putText(frame, "BUSY", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
         cv2.imshow("High Speed Vision", frame)
         if cv2.waitKey(1) == ord('q'): break
@@ -157,20 +154,31 @@ if __name__ == "__main__":
             time.sleep(0.15)
         
         pressed_pos = get_active_key(pos_keys)
+        # <--- KEY CHANGE 4: Threading logic implemented below
         if pressed_pos:
             if selected_card is None:
                 print("NO CARD SELECTED. Press 1-4 first.")
                 time.sleep(0.15)
-                pressed_pos = None
-            else:
+                # No need to reset pressed_pos variable, just wait
+            elif not bot_state["is_acting"]:
                 target_loc = pos_map[pressed_pos]
-                print(f"Playing {selected_card} at {pressed_pos} {target_loc}")
+                # print(f"Playing {selected_card} at {pressed_pos} {target_loc}")
 
-                try:
-                    bot_controls.play_card(f"card_{selected_card}", target_loc, screen_config, mapper)
-                except Exception as e:
-                    print(f"Action Failed: {e}")
+                # Define the task to run in background
+                def action_task(card, loc):
+                    bot_state["is_acting"] = True
+                    try:
+                        bot_controls.play_card(f"card_{card}", loc, screen_config, mapper)
+                    except Exception as e:
+                        print(f"Action Failed: {e}")
+                    bot_state["is_acting"] = False
+
+                # Launch thread
+                t = threading.Thread(target=action_task, args=(selected_card, target_loc))
+                t.start()
                 
+                # Reset UI state immediately
                 selected_card = None
                 time.sleep(0.15)
-    cv2.destroyAllWindows
+    
+    cv2.destroyAllWindows()
