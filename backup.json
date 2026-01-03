@@ -1,0 +1,134 @@
+{
+    "arena": {
+        "top_left": [
+            11,
+            120
+        ],
+        "top_right": [
+            489,
+            119
+        ],
+        "bottom_left": [
+            11,
+            770
+        ],
+        "bottom_right": [
+            489,
+            771
+        ]
+    },
+    "card_slots": {
+        "card_1": [
+            155,
+            973
+        ],
+        "card_2": [
+            247,
+            970
+        ],
+        "card_3": [
+            343,
+            971
+        ],
+        "card_4": [
+            438,
+            972
+        ]
+    },
+    "elixir": {
+        "top_left": [
+            169,
+            1036
+        ],
+        "top_right": [
+            483,
+            1036
+        ],
+        "bottom_left": [
+            169,
+            1047
+        ],
+        "bottom_right": [
+            483,
+            1047
+        ]
+    },
+    "window": {
+        "top": 164,
+        "left": 1416,
+        "width": 479,
+        "height": 1024
+    },
+    "location": {
+        "bridge_left": [
+            3,
+            16,
+            "w"
+        ],
+        "bridge_middle": [
+            9,
+            16,
+            "e"
+        ],
+        "bridge_right": [
+            15,
+            16,
+            "r"
+        ],
+        "defense_farleft": [
+            1,
+            21,
+            "a"
+        ],
+        "defense_left": [
+            5,
+            21,
+            "s"
+        ],
+        "defense_middle": [
+            9,
+            21,
+            "d"
+        ],
+        "defense_right": [
+            13,
+            21,
+            "f"
+        ],
+        "defense_farright": [
+            17,
+            21,
+            "g"
+        ],
+        "corner_left": [
+            0,
+            30,
+            "z"
+        ],
+        "king_left": [
+            8,
+            31,
+            "x"
+        ],
+        "king_right": [
+            10,
+            31,
+            "c"
+        ],
+        "corner_right": [
+            18,
+            30,
+            "v"
+        ],
+        "fireball_left": [
+            4,
+            8,
+            "o"
+        ],
+        "fireball_right": [
+            14,
+            8,
+            "p"
+        ]
+    }
+}

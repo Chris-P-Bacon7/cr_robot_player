@@ -1,0 +1,72 @@
+import cv2
+import numpy as np
+import os
+
+class CardVision:
+    def __init__(self):
+        # This dictionary serves as the bot's "Memory"
+        # Format: { "name_of_thing": image_data_matrix }
+        self.templates = {}
+
+    def load_template(self, name, image_path, evo_hero):
+        """
+        Loads an image file (like 'hog_rider.png') into memory.
+        """
+        # cv2.IMREAD_COLOR loads it in BGR format (Standard for OpenCV)
+        # cv2.IMREAD_UNCHANGED would include transparency (alpha), which we usually strip for matching
+        
+        filename = f"Card_{name}"
+        
+        if evo_hero == 1:
+            filename = f"{name}_Evolution"
+        elif evo_hero == 2:
+            filename = f"{name}_Hero"
+        
+        filename = f"{filename}.png"
+        full_path = os.path.join(image_path, filename)
+        
+        img = cv2.imread(full_path, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            print(f"❌ Error: Could not find image at '{image_path}'")
+        else:
+            self.templates[name] = img
+            print(f"✅ Learned pattern: {name}, {full_path}")
+
+    def find(self, haystack_img, template_name, threshold=0.8, debug_mode=False):
+        """
+        Scans the 'haystack' (screenshot) for the 'template'.
+        Returns: A list of Rectangles (x, y, w, h) where matches were found.
+        """
+        if template_name not in self.templates:
+            return []
+
+        needle_img = self.templates[template_name]
+        needle_w = needle_img.shape[1]
+        needle_h = needle_img.shape[0]
+
+        # 1. Run the matching algorithm
+        # TM_CCOEFF_NORMED is the best all-rounder. 1.0 = Perfect Match, 0.0 = No Match.
+        result = cv2.matchTemplate(haystack_img, needle_img, cv2.TM_CCOEFF_NORMED)
+
+        # 2. Filter out weak matches
+        locations = np.where(result >= threshold)
+        locations = list(zip(*locations[::-1])) # Convert to (x, y) tuples
+
+        # 3. Consolidate overlapping matches (Clean up the noise)
+        # (This is a simplified version. For now, we return all points)
+        rectangles = []
+        for loc in locations:
+            rect = [int(loc[0]), int(loc[1]), needle_w, needle_h]
+            # Add twice to allow grouping logic later (OpenCV requirement for groupRectangles)
+            rectangles.append(rect)
+            rectangles.append(rect)
+
+        # groupRectangles merges boxes that are right on top of each other
+        # eps=0.5 (grouping threshold), groupThreshold=1 (min number of overlaps)
+        rectangles, weights = cv2.groupRectangles(rectangles, groupThreshold=1, eps=0.5)
+
+        return rectangles
+    
+if __name__ == "__main__":
+    pass

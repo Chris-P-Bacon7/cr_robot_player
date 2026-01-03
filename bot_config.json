@@ -1,68 +1,93 @@
 {
     "arena": {
         "top_left": [
-            8,
-            94
+            10,
+            119
         ],
         "top_right": [
-            418,
-            95
+            488,
+            117
         ],
         "bottom_left": [
-            7,
-            654
+            10,
+            773
         ],
         "bottom_right": [
-            421,
-            652
+            490,
+            775
         ]
     },
     "card_slots": {
         "card_1": [
-            132,
-            824
+            155,
+            971
         ],
         "card_2": [
-            215,
-            824
+            251,
+            970
         ],
         "card_3": [
-            295,
-            824
+            345,
+            970
         ],
         "card_4": [
-            377,
-            823
+            440,
+            969
         ]
     },
     "elixir": {
         "top_left": [
-            144,
-            880
+            169,
+            1035
         ],
         "top_right": [
-            415,
-            880
+            483,
+            1035
         ],
         "bottom_left": [
-            144,
-            896
+            169,
+            1046
         ],
         "bottom_right": [
-            415,
-            896
+            483,
+            1046
         ]
     },
-    "window_pos": {
-        "top": 0,
-        "left": 0,
-        "width": 0,
-        "height": 0
+    "window": {
+        "top": 164,
+        "left": 1416,
+        "width": 479,
+        "height": 1024
     },
     "location": {
+        "bridge_left": [
+            3,
+            16,
+            "w"
+        ],
+        "bridge_kiteright": [
+            8,
+            16,
+            "e"
+        ],
+        "bridge_kiteleft": [
+            9,
+            16,
+            "r"
+        ],
+        "bridge_right": [
+            15,
+            14,
+            "t"
+        ],
+        "defense_farleft": [
+            1,
+            21,
+            "a"
+        ],
         "defense_left": [
             5,
-            22,
+            21,
             "s"
         ],
         "defense_middle": [
@@ -71,50 +96,54 @@
             "d"
         ],
         "defense_right": [
-            15,
-            30,
+            13,
+            21,
             "f"
         ],
-        "bridge_left": [
-            3,
+        "defense_farright": [
             17,
-            "w"
+            21,
+            "g"
         ],
-        "bridge_middle": [
-            9,
-            17,
-            "e"
-        ],
-        "bridge_right": [
-            15,
-            17,
-            "r"
-        ],
-        "back_left": [
+        "corner_left": [
             0,
-            30,
+            29,
             "z"
         ],
         "king_left": [
-            9,
+            8,
             30,
             "x"
         ],
         "king_right": [
-            10,
+            9,
             30,
             "c"
         ],
-        "back_right": [
-            18,
-            30,
+        "corner_right": [
+            17,
+            29,
             "v"
+        ],
+        "fireball_farleft": [
+            2,
+            8,
+            "u"
+        ],
+        "fireball_left": [
+            4,
+            8,
+            "i"
+        ],
+        "fireball_right": [
+            13,
+            8,
+            "o"
+        ],
+        "fireball_farright": [
+            15,
+            8,
+            "p"
         ]
-    },
-    "window": {
-        "top": 142,
-        "left": 1473,
-        "width": 428,
-        "height": 908
     }
 }
