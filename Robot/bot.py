@@ -70,6 +70,7 @@ if __name__ == "__main__":
     cap = WindowCapture(phone_name)
     mapper = ScreenMapper(screen_config)
     bot_controls = GameController(cap)
+    card_vision = CardVision()
 
     # Initialization
     card_keys = ["1", "2", "3", "4"]
@@ -90,8 +91,7 @@ if __name__ == "__main__":
     print(f"Card Keys: {card_keys}")
     print(f"Pos keys: {pos_keys}")
 
-    card_vision = CardVision()
-    card_vision.load_template("Fireball", r"assets\cards", 0)
+    card_vision.load_template("Fireball", r"Robot\assets\cards", 0)
     
     while True:
         loop_start = time.time()
