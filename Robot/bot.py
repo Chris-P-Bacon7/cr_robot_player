@@ -5,6 +5,7 @@ import time
 import json
 import os
 import threading 
+from concurrent.futures import ThreadPoolExecutor
 from window_capture import WindowCapture 
 from controls import GameController
 from card_vision import CardVision
@@ -18,8 +19,8 @@ except Exception:
 # ================= CONFIGURATION =================
 arena_width = 18
 arena_height = 30
-phone_name = "SM-S936W"
-card_TBR = "Fireball"
+phone_name = "SM-A536W"
+deck = ["Fireball", "Bats", "SkeletonArmy", "Valkyrie", "Tesla"]
 
 def load_json_config():
     if not os.path.exists("bot_config.json"):
@@ -92,8 +93,9 @@ if __name__ == "__main__":
     print(f"Card Keys: {card_keys}")
     print(f"Pos keys: {pos_keys}")
 
-    card_vision.load_template(card_TBR, "Robot\\assets\\cards", 0)
-    cv2.namedWindow("High Speed Vision", cv2.WINDOW_NORMAL)
+    for card in deck:
+        card_vision.load_template(card, "Robot\\assets\\cards", 0)
+        cv2.namedWindow("High Speed Vision", cv2.WINDOW_NORMAL)
     
     while True:
         loop_start = time.time()
@@ -109,18 +111,25 @@ if __name__ == "__main__":
             continue
 
         # --- CARD RECOGNITION ---
-        matches = card_vision.find(frame, card_TBR, threshold=0.67)
-        print(matches)
+        matches = []
 
-        for ((x, y, w, h), score) in matches:
+        with ThreadPoolExecutor(max_workers=len(deck)) as executor:
+            for i in range(len(deck)):
+                matches = executor.submit(card_vision.find, frame, deck[i], threshold=0.367).result()
+                print(matches)
+    
+        # matches = card_vision.find(frame, card_TBR, threshold=0.67)
+        # print(matches)
 
-            # Draw the box
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2) # BGR for green
+                for ((x, y, w, h), score) in matches:
 
-            # Draw the Label and the Score (e.g., "Fireball 0.6767676767")
-            label = f"{card_TBR} {score:.3f}"
-            cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 
-                        0.5, (0, 255, 0), 2)
+                    # Draw the box
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2) # BGR for green
+
+                    # Draw the Label and the Score (e.g., "Fireball 0.6767676767")
+                    label = f"{deck[i]} {score:.3f}"
+                    cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 
+                                0.5, (0, 255, 0), 2)
             
 
         # <--- KEY CHANGE: DRAWING GRID AT CENTERS --->
