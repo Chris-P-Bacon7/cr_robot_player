@@ -70,7 +70,6 @@ class CardVision:
         for (x, y, w, h) in rectangles:
             try:
                 confidence = result[int(y), int(x)]
-                print("Path success")
             except IndexError:
                 print("Error in determining confidence.")
 

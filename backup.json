@@ -1,61 +1,61 @@
 {
     "arena": {
         "top_left": [
-            11,
-            120
-        ],
-        "top_right": [
-            489,
+            10,
             119
         ],
+        "top_right": [
+            488,
+            117
+        ],
         "bottom_left": [
-            11,
-            770
+            10,
+            773
         ],
         "bottom_right": [
-            489,
-            771
+            490,
+            775
         ]
     },
     "card_slots": {
         "card_1": [
             155,
-            973
+            971
         ],
         "card_2": [
-            247,
+            251,
             970
         ],
         "card_3": [
-            343,
-            971
+            345,
+            970
         ],
         "card_4": [
-            438,
-            972
+            440,
+            969
         ]
     },
     "elixir": {
         "top_left": [
             169,
-            1036
+            1035
         ],
         "top_right": [
             483,
-            1036
+            1035
         ],
         "bottom_left": [
             169,
-            1047
+            1046
         ],
         "bottom_right": [
             483,
-            1047
+            1046
         ]
     },
     "window": {
-        "top": 164,
-        "left": 1416,
+        "top": 152,
+        "left": 1435,
         "width": 479,
         "height": 1024
     },
@@ -65,15 +65,20 @@
             16,
             "w"
         ],
-        "bridge_middle": [
-            9,
+        "bridge_kiteright": [
+            8,
             16,
             "e"
         ],
-        "bridge_right": [
-            15,
+        "bridge_kiteleft": [
+            9,
             16,
             "r"
+        ],
+        "bridge_right": [
+            15,
+            14,
+            "t"
         ],
         "defense_farleft": [
             1,
@@ -102,33 +107,48 @@
         ],
         "corner_left": [
             0,
-            30,
+            29,
             "z"
         ],
         "king_left": [
             8,
-            31,
+            30,
             "x"
         ],
         "king_right": [
-            10,
-            31,
+            9,
+            30,
             "c"
         ],
         "corner_right": [
-            18,
-            30,
+            17,
+            29,
             "v"
+        ],
+        "fireball_farleft": [
+            2,
+            8,
+            "u"
         ],
         "fireball_left": [
             4,
             8,
-            "o"
+            "i"
         ],
         "fireball_right": [
-            14,
+            13,
+            8,
+            "o"
+        ],
+        "fireball_farright": [
+            15,
             8,
             "p"
+        ],
+        "nuclear_launch": [
+            8,
+            1,
+            "n"
         ]
     }
 }

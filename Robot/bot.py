@@ -19,8 +19,21 @@ except Exception:
 # ================= CONFIGURATION =================
 arena_width = 18
 arena_height = 30
-phone_name = "SM-A536W"
-deck = ["Fireball", "Bats", "SkeletonArmy", "Valkyrie", "Tesla"]
+phones = {
+    "Riley": "SM-A536W",
+    "Chris": "SM-S936W"}
+decks = {
+    "Riley": ["Fireball", "Bats", "SkeletonArmy", "Valkyrie", "Tesla"],
+    "Chris": ["Fireball", "PEKKA", "Bandit", "BattleRam",
+              "RoyalGhost", "Zap", "MagicArcher", "ElectroWizard"]
+}
+
+def initialize_user(user):
+    global phone_name
+    global deck
+
+    phone_name = phones[user]
+    deck = decks[user]
 
 def load_json_config():
     if not os.path.exists("bot_config.json"):
@@ -66,6 +79,19 @@ class ScreenMapper:
 
 # ================= MAIN LOOP =================
 if __name__ == "__main__":
+    user = input("Enter your name: ")
+
+    if user in phones:
+        initialize_user(user)
+    else:
+        print("Get the hell off of my program >:(")
+        time.sleep(2)
+        print("I'm kicking you out now.")
+        time.sleep(1)
+        print("The program has terminated due to an ineligible user.")
+        exit()
+        
+
     screen_config = load_config()
     raw_json = load_json_config()
 
@@ -111,15 +137,12 @@ if __name__ == "__main__":
             continue
 
         # --- CARD RECOGNITION ---
-        matches = []
+        hand = cap.get_hand()
 
         with ThreadPoolExecutor(max_workers=len(deck)) as executor:
             for i in range(len(deck)):
-                matches = executor.submit(card_vision.find, frame, deck[i], threshold=0.367).result()
-                print(matches)
-    
-        # matches = card_vision.find(frame, card_TBR, threshold=0.67)
-        # print(matches)
+                matches = executor.submit(card_vision.find, frame, deck[i], threshold=0.567).result()
+                print(matches[1])
 
                 for ((x, y, w, h), score) in matches:
 
