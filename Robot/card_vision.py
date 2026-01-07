@@ -66,7 +66,17 @@ class CardVision:
         # eps=0.5 (grouping threshold), groupThreshold=1 (min number of overlaps)
         rectangles, weights = cv2.groupRectangles(rectangles, groupThreshold=1, eps=0.5)
 
-        return rectangles
+        final_result = []
+        for (x, y, w, h) in rectangles:
+            try:
+                confidence = result[int(y), int(x)]
+                print("Path success")
+            except IndexError:
+                print("Error in determining confidence.")
+
+            final_result.append(((x, y, w, h), confidence))
+
+        return final_result
     
 if __name__ == "__main__":
     pass

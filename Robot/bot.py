@@ -18,7 +18,8 @@ except Exception:
 # ================= CONFIGURATION =================
 arena_width = 18
 arena_height = 30
-phone_name = "SM-S936W" 
+phone_name = "SM-S936W"
+card_TBR = "Fireball"
 
 def load_json_config():
     if not os.path.exists("bot_config.json"):
@@ -91,16 +92,36 @@ if __name__ == "__main__":
     print(f"Card Keys: {card_keys}")
     print(f"Pos keys: {pos_keys}")
 
-    card_vision.load_template("Fireball", r"Robot\assets\cards", 0)
+    card_vision.load_template(card_TBR, "Robot\\assets\\cards", 0)
+    cv2.namedWindow("High Speed Vision", cv2.WINDOW_NORMAL)
     
     while True:
         loop_start = time.time()
         
         # --- VISION ---
-        frame = cap.get_screenshot()
+        try:
+            frame = cap.get_screenshot()
+        except Exception as e:
+            print(f"Your scrcpy window was not open: {e}")
+            break
         if frame is None:
             time.sleep(1)
             continue
+
+        # --- CARD RECOGNITION ---
+        matches = card_vision.find(frame, card_TBR, threshold=0.67)
+        print(matches)
+
+        for ((x, y, w, h), score) in matches:
+
+            # Draw the box
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2) # BGR for green
+
+            # Draw the Label and the Score (e.g., "Fireball 0.6767676767")
+            label = f"{card_TBR} {score:.3f}"
+            cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 
+                        0.5, (0, 255, 0), 2)
+            
 
         # <--- KEY CHANGE: DRAWING GRID AT CENTERS --->
         # Draw Vertical Lines (Centers)
