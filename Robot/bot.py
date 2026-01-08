@@ -20,10 +20,12 @@ except Exception:
 arena_width = 18
 arena_height = 30
 phones = {
-    "Riley": "SM-A536W",
+    # "Riley": "SM-A536W",
+    "Riley": "SM-S936W",
     "Chris": "SM-S936W"}
 decks = {
-    "Riley": ["Fireball", "Bats", "SkeletonArmy", "Valkyrie", "Tesla"],
+    "Riley": ["Fireball", "Bats", "SkeletonArmy", "Valkyrie", "Tesla", 
+              "Musketeer_Hero", "Log", "HogRider"],
     "Chris": ["Fireball", "PEKKA", "Bandit", "BattleRam",
               "RoyalGhost", "Zap", "MagicArcher", "ElectroWizard"]
 }
@@ -76,6 +78,9 @@ class ScreenMapper:
         transformed = cv2.perspectiveTransform(point, self.matrix)
         return (int(transformed[0][0][0]), int(transformed[0][0][1]))
 
+def vision_worker(vision_obj, img, card_name):
+    # Helper to run vision on a separate thread
+    return card_name, vision_obj.find(img, card_name, threshold=0.4)
 
 # ================= MAIN LOOP =================
 if __name__ == "__main__":
@@ -91,7 +96,6 @@ if __name__ == "__main__":
         print("The program has terminated due to an ineligible user.")
         exit()
         
-
     screen_config = load_config()
     raw_json = load_json_config()
 
@@ -121,124 +125,138 @@ if __name__ == "__main__":
 
     for card in deck:
         card_vision.load_template(card, "Robot\\assets\\cards", 0)
-        cv2.namedWindow("High Speed Vision", cv2.WINDOW_NORMAL)
-    
-    while True:
-        loop_start = time.time()
         
-        # --- VISION ---
-        try:
-            frame = cap.get_screenshot()
-        except Exception as e:
-            print(f"Your scrcpy window was not open: {e}")
-            break
-        if frame is None:
-            time.sleep(1)
-            continue
+    cv2.namedWindow("High Speed Vision", cv2.WINDOW_NORMAL)
+    
+    # <--- OPTIMIZATION: OPEN THREAD POOL ONCE HERE --->
+    with ThreadPoolExecutor(max_workers=len(deck)) as executor:
+        
+        while True:
+            loop_start = time.time()
+            
+            # --- VISION ---
+            try:
+                frame = cap.get_screenshot()
+            except Exception as e:
+                print(f"Your scrcpy window was not open: {e}")
+                break
+            if frame is None:
+                time.sleep(1)
+                continue
 
-        # --- CARD RECOGNITION ---
-        hand = cap.get_hand()
+            # --- CARD RECOGNITION (OPTIMIZED) ---
+            # 1. Define Region of Interest (Bottom 40% of screen)
+            h_frame, w_frame = frame.shape[:2]
+            roi_top = int(h_frame * 0.85) 
+            
+            # Create a view of just the hand area
+            hand_view = frame[roi_top:h_frame, 0:w_frame]
 
-        with ThreadPoolExecutor(max_workers=len(deck)) as executor:
-            for i in range(len(deck)):
-                matches = executor.submit(card_vision.find, frame, deck[i], threshold=0.567).result()
-                print(matches[1])
+            # 2. Submit ALL tasks first (Parallel execution)
+            futures = []
+            for card_name in deck:
+                futures.append(executor.submit(vision_worker, card_vision, hand_view, card_name))
 
+            # 3. Collect Results
+            for future in futures:
+                card_name, matches = future.result()
+                
                 for ((x, y, w, h), score) in matches:
+                    # <--- TRANSLATE COORDINATES BACK TO FULL SCREEN --->
+                    real_y = y + roi_top
 
                     # Draw the box
-                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2) # BGR for green
+                    cv2.rectangle(frame, (x, real_y), (x + w, real_y + h), (0, 255, 0), 2)
 
-                    # Draw the Label and the Score (e.g., "Fireball 0.6767676767")
-                    label = f"{deck[i]} {score:.3f}"
-                    cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 
+                    # Draw the Label and the Score
+                    label = f"{card_name} {score:.3f}"
+                    cv2.putText(frame, label, (x, real_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 
                                 0.5, (0, 255, 0), 2)
+
+            # <--- KEY CHANGE: DRAWING GRID AT CENTERS --->
+            # Draw Vertical Lines (Centers)
+            for x in range(arena_width):
+                # x + 0.5 is the center of the tile
+                center_x = x + 0.5
+                p1 = mapper.tile_to_pixel(center_x, 0)
+                p2 = mapper.tile_to_pixel(center_x, arena_height)
+                cv2.line(frame, p1, p2, (255, 255, 255), 1, cv2.LINE_AA) 
+
+            # Draw Horizontal Lines (Centers)
+            for y in range(arena_height):
+                center_y = y + 0.5
+                p1 = mapper.tile_to_pixel(0, center_y)
+                p2 = mapper.tile_to_pixel(arena_width, center_y)
+                cv2.line(frame, p1, p2, (255, 255, 255), 1, cv2.LINE_AA)
+
+            # Draw Numbers (At Centers)
+            for x in range(0, arena_width, 2):
+                px, py = mapper.tile_to_pixel(x + 0.5, arena_height)
+                location = (px - 6, py - 8)
+                cv2.putText(frame, str(x), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3, cv2.LINE_AA)
+                cv2.putText(frame, str(x), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+
+            for y in range(0, arena_height, 2):
+                px, py = mapper.tile_to_pixel(0, y + 0.5)
+                location = (px + 5, py + 5)
+                cv2.putText(frame, str(y), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3, cv2.LINE_AA)
+                cv2.putText(frame, str(y), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+
+            # Draw Card Slots
+            for i in range(1, 5):
+                key_str = str(i)
+                if f"card_{i}" in screen_config:
+                    cx, cy = screen_config[f"card_{i}"]
+                    color = (0, 255, 255) 
+                    thickness = 2
+                    if selected_card == key_str:
+                        color = (0, 255, 0)
+                        thickness = -1 
+                    cv2.circle(frame, (cx, cy), 10, color, thickness)
             
+            fps = int(1 / (time.time() - loop_start + 0.001))
+            cv2.putText(frame, f"FPS: {fps}", (10, 30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            
+            if bot_state["is_acting"]:
+                cv2.putText(frame, "BUSY", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-        # <--- KEY CHANGE: DRAWING GRID AT CENTERS --->
-        # Draw Vertical Lines (Centers)
-        for x in range(arena_width):
-            # x + 0.5 is the center of the tile
-            center_x = x + 0.5
-            p1 = mapper.tile_to_pixel(center_x, 0)
-            p2 = mapper.tile_to_pixel(center_x, arena_height)
-            cv2.line(frame, p1, p2, (255, 255, 255), 1, cv2.LINE_AA) 
+            cv2.imshow("High Speed Vision", frame)
+            if cv2.waitKey(1) == ord('q'): break
 
-        # Draw Horizontal Lines (Centers)
-        for y in range(arena_height):
-            center_y = y + 0.5
-            p1 = mapper.tile_to_pixel(0, center_y)
-            p2 = mapper.tile_to_pixel(arena_width, center_y)
-            cv2.line(frame, p1, p2, (255, 255, 255), 1, cv2.LINE_AA)
-
-        # Draw Numbers (At Centers)
-        for x in range(0, arena_width, 2):
-            px, py = mapper.tile_to_pixel(x + 0.5, arena_height)
-            location = (px - 6, py - 8)
-            cv2.putText(frame, str(x), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3, cv2.LINE_AA)
-            cv2.putText(frame, str(x), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
-
-        for y in range(0, arena_height, 2):
-            px, py = mapper.tile_to_pixel(0, y + 0.5)
-            location = (px + 5, py + 5)
-            cv2.putText(frame, str(y), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3, cv2.LINE_AA)
-            cv2.putText(frame, str(y), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
-
-        # Draw Card Slots
-        for i in range(1, 5):
-            key_str = str(i)
-            if f"card_{i}" in screen_config:
-                cx, cy = screen_config[f"card_{i}"]
-                color = (0, 255, 255) 
-                thickness = 2
-                if selected_card == key_str:
-                    color = (0, 255, 0)
-                    thickness = -1 
-                cv2.circle(frame, (cx, cy), 10, color, thickness)
-        
-        fps = int(1 / (time.time() - loop_start + 0.001))
-        cv2.putText(frame, f"FPS: {fps}", (10, 30), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        
-        if bot_state["is_acting"]:
-             cv2.putText(frame, "BUSY", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-
-        cv2.imshow("High Speed Vision", frame)
-        if cv2.waitKey(1) == ord('q'): break
-
-        # ----- Controls Logic ------
-        pressed_card = get_active_key(card_keys)
-        if pressed_card:
-            selected_card = pressed_card
-            print(f"Card {selected_card} SELECTED! Waiting for position...")
-            time.sleep(0.15)
-        
-        pressed_pos = get_active_key(pos_keys)
-        
-        if pressed_pos:
-            if selected_card is None:
-                print("NO CARD SELECTED. Press 1-4 first.")
+            # ----- Controls Logic ------
+            pressed_card = get_active_key(card_keys)
+            if pressed_card:
+                selected_card = pressed_card
+                print(f"Card {selected_card} SELECTED! Waiting for position...")
                 time.sleep(0.15)
-            elif not bot_state["is_acting"]:
-                # <--- KEY CHANGE: OFFSET TARGET TO TILE CENTER --->
-                raw_x, raw_y = pos_map[pressed_pos]
-                # Adding 0.5 ensures we click the visual center of the tile
-                target_loc = (raw_x + 0.5, raw_y + 0.5)
-                
-                print(f"Playing {selected_card} at {(raw_x, raw_y)}")
+            
+            pressed_pos = get_active_key(pos_keys)
+            
+            if pressed_pos:
+                if selected_card is None:
+                    print("NO CARD SELECTED. Press 1-4 first.")
+                    time.sleep(0.15)
+                elif not bot_state["is_acting"]:
+                    # <--- KEY CHANGE: OFFSET TARGET TO TILE CENTER --->
+                    raw_x, raw_y = pos_map[pressed_pos]
+                    # Adding 0.5 ensures we click the visual center of the tile
+                    target_loc = (raw_x + 0.5, raw_y + 0.5)
+                    
+                    print(f"Playing {selected_card} at {(raw_x, raw_y)}")
 
-                def action_task(card, loc):
-                    bot_state["is_acting"] = True
-                    try:
-                        bot_controls.play_card(f"card_{card}", loc, screen_config, mapper)
-                    except Exception as e:
-                        print(f"Action Failed: {e}")
-                    bot_state["is_acting"] = False
+                    def action_task(card, loc):
+                        bot_state["is_acting"] = True
+                        try:
+                            bot_controls.play_card(f"card_{card}", loc, screen_config, mapper)
+                        except Exception as e:
+                            print(f"Action Failed: {e}")
+                        bot_state["is_acting"] = False
 
-                t = threading.Thread(target=action_task, args=(selected_card, target_loc))
-                t.start()
-                
-                selected_card = None
-                time.sleep(0.15)
+                    t = threading.Thread(target=action_task, args=(selected_card, target_loc))
+                    t.start()
+                    
+                    selected_card = None
+                    time.sleep(0.15)
     
     cv2.destroyAllWindows()
