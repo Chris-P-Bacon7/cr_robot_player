@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import json
 import os
 
 class CardVision:
@@ -77,5 +78,6 @@ class CardVision:
 
         return final_result
     
+
 if __name__ == "__main__":
     pass

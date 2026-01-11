@@ -93,14 +93,14 @@ if __name__ == "__main__":
     if user in phones:
         initialize_user(user)
     else:
-        print(f"{user}?")
+        print(f"{user.capitalize()}?")
         time.sleep(1.5)
         print(f"What kind of name is that?")
         time.sleep(1.5)
         print("Get the hell off of my program >:(")
         time.sleep(1.5)
-        print("CRITICAL ERROR DETECTED -> Please see traceback: \n\
-              UserError: The program has terminated due to an ineligible user '{user}.")
+        print(f"CRITICAL ERROR DETECTED -> Please see traceback: \n\
+              UserError: The program has terminated due to an ineligible user '{user.capitalize()}'.")
         exit()
         
     screen_config = load_config()
