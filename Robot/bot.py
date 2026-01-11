@@ -4,7 +4,8 @@ import keyboard
 import time
 import json
 import os
-import threading 
+import threading
+import random as rand
 from concurrent.futures import ThreadPoolExecutor
 from window_capture import WindowCapture 
 from controls import GameController
@@ -21,12 +22,12 @@ arena_width = 18
 arena_height = 30
 phones = {
     # "Riley": "SM-A536W",
-    "Riley": "SM-S936W",
-    "Chris": "SM-S936W"}
+    "riley": "SM-S936W",
+    "chris": "SM-S936W"}
 decks = {
-    "Riley": ["Fireball", "Bats", "SkeletonArmy", "Valkyrie", "Tesla", 
+    "riley": ["Fireball", "Bats", "SkeletonArmy", "Valkyrie", "Tesla", 
               "Musketeer_Hero", "Log", "HogRider"],
-    "Chris": ["Fireball", "PEKKA", "Bandit", "BattleRam",
+    "chris": ["Fireball", "PEKKA", "Bandit", "BattleRam",
               "RoyalGhost", "Zap", "MagicArcher", "ElectroWizard"]
 }
 
@@ -80,20 +81,26 @@ class ScreenMapper:
 
 def vision_worker(vision_obj, img, card_name):
     # Helper to run vision on a separate thread
-    return card_name, vision_obj.find(img, card_name, threshold=0.4)
+    return card_name, vision_obj.find(img, card_name, threshold=0.750)
 
 # ================= MAIN LOOP =================
 if __name__ == "__main__":
-    user = input("Enter your name: ")
+    user = input("Enter your name (Riley/Chris): ").lower()
+    time.sleep(0.5)
+    print(f"Welcome, {user.capitalize()}!")
+    time.sleep(0.75)
 
     if user in phones:
         initialize_user(user)
     else:
+        print(f"{user}?")
+        time.sleep(1.5)
+        print(f"What kind of name is that?")
+        time.sleep(1.5)
         print("Get the hell off of my program >:(")
-        time.sleep(2)
-        print("I'm kicking you out now.")
-        time.sleep(1)
-        print("The program has terminated due to an ineligible user.")
+        time.sleep(1.5)
+        print("CRITICAL ERROR DETECTED -> Please see traceback: \n\
+              UserError: The program has terminated due to an ineligible user '{user}.")
         exit()
         
     screen_config = load_config()
@@ -147,7 +154,7 @@ if __name__ == "__main__":
             # --- CARD RECOGNITION (OPTIMIZED) ---
             # 1. Define Region of Interest (Bottom 40% of screen)
             h_frame, w_frame = frame.shape[:2]
-            roi_top = int(h_frame * 0.85) 
+            roi_top = int(h_frame * 0.86) 
             
             # Create a view of just the hand area
             hand_view = frame[roi_top:h_frame, 0:w_frame]

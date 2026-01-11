@@ -2,19 +2,19 @@
     "arena": {
         "top_left": [
             10,
-            119
+            110
         ],
         "top_right": [
             488,
-            117
+            110
         ],
         "bottom_left": [
             10,
-            773
+            760
         ],
         "bottom_right": [
             490,
-            775
+            760
         ]
     },
     "card_slots": {
@@ -54,10 +54,10 @@
         ]
     },
     "window": {
-        "top": 140,
-        "left": 1429,
-        "width": 479,
-        "height": 1024
+        "top": 134,
+        "left": 1422,
+        "width": 428,
+        "height": 908
     },
     "location": {
         "bridge_left": [
