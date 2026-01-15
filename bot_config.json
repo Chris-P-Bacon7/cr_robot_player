@@ -1,325 +1,154 @@
 {
-
-  "arena": {
-
-    "top_left": [
-
-      10,
-
-      110
-
-    ],
-
-    "top_right": [
-
-      488,
-
-      110
-
-    ],
-
-    "bottom_left": [
-
-      10,
-
-      760
-
-    ],
-
-    "bottom_right": [
-
-      490,
-
-      760
-
-    ]
-
-  },
-
-  "card_slots": {
-
-    "card_1": [
-
-      155,
-
-      971
-
-    ],
-
-    "card_2": [
-
-      251,
-
-      970
-
-    ],
-
-    "card_3": [
-
-      345,
-
-      970
-
-    ],
-
-    "card_4": [
-
-      440,
-
-      969
-
-    ]
-
-  },
-
-  "elixir": {
-
-
-  "top_left": [
-
-
-   167,
-
-
-   1035
-
-
-  ],
-
-
-  "top_right": [
-
-
-   482,
-
-
-   1035
-
-
-  ],
-
-
-  "bottom_left": [
-
-
-   167,
-
-
-   1042
-
-
-  ],
-
-
-  "bottom_right": [
-
-
-   482,
-
-
-   1042
-
-
-  ]
-
-
- },
-
-  "window": {
-
-    "top": 148,
-
-    "left": 1373,
-
-    "width": 479,
-
-    "height": 1024
-
-  },
-
-  "location": {
-
-    "bridge_left": [
-
-      3,
-
-      16,
-
-      "w"
-
-    ],
-
-    "bridge_kiteright": [
-
-      8,
-
-      16,
-
-      "e"
-
-    ],
-
-    "bridge_kiteleft": [
-
-      9,
-
-      16,
-
-      "r"
-
-    ],
-
-    "bridge_right": [
-
-      15,
-
-      14,
-
-      "t"
-
-    ],
-
-    "defense_farleft": [
-
-      1,
-
-      21,
-
-      "a"
-
-    ],
-
-    "defense_left": [
-
-      5,
-
-      21,
-
-      "s"
-
-    ],
-
-    "defense_middle": [
-
-      9,
-
-      21,
-
-      "d"
-
-    ],
-
-    "defense_right": [
-
-      13,
-
-      21,
-
-      "f"
-
-    ],
-
-    "defense_farright": [
-
-      17,
-
-      21,
-
-      "g"
-
-    ],
-
-    "corner_left": [
-
-      0,
-
-      29,
-
-      "z"
-
-    ],
-
-    "king_left": [
-
-      8,
-
-      30,
-
-      "x"
-
-    ],
-
-    "king_right": [
-
-      9,
-
-      30,
-
-      "c"
-
-    ],
-
-    "corner_right": [
-
-      17,
-
-      29,
-
-      "v"
-
-    ],
-
-    "fireball_farleft": [
-
-      2,
-
-      8,
-
-      "u"
-
-    ],
-
-    "fireball_left": [
-
-      4,
-
-      8,
-
-      "i"
-
-    ],
-
-    "fireball_right": [
-
-      13,
-
-      8,
-
-      "o"
-
-    ],
-
-    "fireball_farright": [
-
-      15,
-
-      8,
-
-      "p"
-
-    ],
-
-    "nuclear_launch": [
-
-      8,
-
-      1,
-
-      "n"
-
-    ]
-
-  }
-
+    "arena": {
+        "top_left": [
+            10,
+            110
+        ],
+        "top_right": [
+            488,
+            110
+        ],
+        "bottom_left": [
+            10,
+            760
+        ],
+        "bottom_right": [
+            490,
+            760
+        ]
+    },
+    "card_slots": {
+        "card_1": [
+            155,
+            971
+        ],
+        "card_2": [
+            251,
+            970
+        ],
+        "card_3": [
+            345,
+            970
+        ],
+        "card_4": [
+            440,
+            969
+        ]
+    },
+    "elixir": {
+        "top_left": [
+            167,
+            1035
+        ],
+        "top_right": [
+            482,
+            1035
+        ],
+        "bottom_left": [
+            167,
+            1048
+        ],
+        "bottom_right": [
+            482,
+            1048
+        ]
+    },
+    "window": {
+        "top": 133,
+        "left": 1449,
+        "width": 428,
+        "height": 908
+    },
+    "location": {
+        "bridge_left": [
+            3,
+            16,
+            "w"
+        ],
+        "bridge_kiteright": [
+            8,
+            16,
+            "e"
+        ],
+        "bridge_kiteleft": [
+            9,
+            16,
+            "r"
+        ],
+        "bridge_right": [
+            15,
+            14,
+            "t"
+        ],
+        "defense_farleft": [
+            1,
+            21,
+            "a"
+        ],
+        "defense_left": [
+            5,
+            21,
+            "s"
+        ],
+        "defense_middle": [
+            9,
+            21,
+            "d"
+        ],
+        "defense_right": [
+            13,
+            21,
+            "f"
+        ],
+        "defense_farright": [
+            17,
+            21,
+            "g"
+        ],
+        "corner_left": [
+            0,
+            29,
+            "z"
+        ],
+        "king_left": [
+            8,
+            30,
+            "x"
+        ],
+        "king_right": [
+            9,
+            30,
+            "c"
+        ],
+        "corner_right": [
+            17,
+            29,
+            "v"
+        ],
+        "fireball_farleft": [
+            2,
+            8,
+            "u"
+        ],
+        "fireball_left": [
+            4,
+            8,
+            "i"
+        ],
+        "fireball_right": [
+            13,
+            8,
+            "o"
+        ],
+        "fireball_farright": [
+            15,
+            8,
+            "p"
+        ],
+        "nuclear_launch": [
+            8,
+            1,
+            "n"
+        ]
+    }
 }
-

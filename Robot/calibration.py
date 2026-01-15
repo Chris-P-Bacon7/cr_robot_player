@@ -112,6 +112,9 @@ def main():
     print("ARROWS: Move Corner (Shift for speed)")
     print("ENTER:  Save & Quit")
 
+    cv2.namedWindow("Calibration Wizard", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("Calibration Wizard", 450, 954)
+
     while True:
         frame = cap.get_screenshot()
         if frame is None: continue
