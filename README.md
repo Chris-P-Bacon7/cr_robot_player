@@ -32,3 +32,10 @@ git pull origin main
 # 3. Resolve any conflicts if prompted, then:
 git add .
 git commit -m "Sync with main"
+
+HOW TO UPDATE A FILE IN YOUR BRANCH FROM ANOTHER ONE:
+# 1. Fetch the latest data
+git fetch origin
+
+# 2. Overwrite the file with the other branch's version
+git checkout other-branch-name -- path/to/your/file.ext
