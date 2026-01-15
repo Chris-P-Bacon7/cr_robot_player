@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from window_capture import WindowCapture 
 from controls import GameController
 from card_vision import CardVision
+from elixir_tracker import ElixirTracker
 
 import ctypes
 try:
@@ -110,6 +111,7 @@ if __name__ == "__main__":
     mapper = ScreenMapper(screen_config)
     bot_controls = GameController(cap)
     card_vision = CardVision()
+    elixir_tracker = ElixirTracker(screen_config)
 
     # Initialization
     card_keys = ["1", "2", "3", "4"]
@@ -133,7 +135,9 @@ if __name__ == "__main__":
     for card in deck:
         card_vision.load_template(card, "Robot\\assets\\cards", 0)
         
-    cv2.namedWindow("High Speed Vision", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("Bot Vision", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("Bot Vision", 450, 954) # Opens window at the same ratio as scrcpy
+    cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 0) # Makes window stay always on top (disabled)
     
     # <--- OPTIMIZATION: OPEN THREAD POOL ONCE HERE --->
     with ThreadPoolExecutor(max_workers=len(deck)) as executor:
@@ -150,6 +154,10 @@ if __name__ == "__main__":
             if frame is None:
                 time.sleep(1)
                 continue
+
+            # --- ELIXIR TRACKING ---
+            # 1. Get current Elixir
+            current_elixir = elixir_tracker.get_elixir(frame)
 
             # --- CARD RECOGNITION (OPTIMIZED) ---
             # 1. Define Region of Interest (Bottom 40% of screen)
@@ -180,7 +188,14 @@ if __name__ == "__main__":
                     cv2.putText(frame, label, (x, real_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 
                                 0.5, (0, 255, 0), 2)
 
-            # <--- KEY CHANGE: DRAWING GRID AT CENTERS --->
+            # --- DRAWING ON BOT VISION ---
+            
+            # Drawing Current Elixir
+            cv2.putText(frame, f"Elixir: {current_elixir}", (10, 800),
+                        cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1, (210, 60, 210), 2, cv2.LINE_4)
+            # cv2.circle(frame, (screen_config["elixir_top_left"][0], 
+            #                    screen_config["elixir_top_left"][1]), 3, (0, 0, 0))
+
             # Draw Vertical Lines (Centers)
             for x in range(arena_width):
                 # x + 0.5 is the center of the tile
@@ -214,12 +229,12 @@ if __name__ == "__main__":
                 key_str = str(i)
                 if f"card_{i}" in screen_config:
                     cx, cy = screen_config[f"card_{i}"]
-                    color = (0, 255, 255) 
+                    colour = (0, 255, 255) 
                     thickness = 2
                     if selected_card == key_str:
-                        color = (0, 255, 0)
+                        colour = (0, 255, 0)
                         thickness = -1 
-                    cv2.circle(frame, (cx, cy), 10, color, thickness)
+                    cv2.circle(frame, (cx, cy), 10, colour, thickness)
             
             fps = int(1 / (time.time() - loop_start + 0.001))
             cv2.putText(frame, f"FPS: {fps}", (10, 30), 
@@ -228,7 +243,7 @@ if __name__ == "__main__":
             if bot_state["is_acting"]:
                 cv2.putText(frame, "BUSY", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-            cv2.imshow("High Speed Vision", frame)
+            cv2.imshow("Bot Vision", frame)
             if cv2.waitKey(1) == ord('q'): break
 
             # ----- Controls Logic ------
@@ -249,6 +264,12 @@ if __name__ == "__main__":
                     raw_x, raw_y = pos_map[pressed_pos]
                     # Adding 0.5 ensures we click the visual center of the tile
                     target_loc = (raw_x + 0.5, raw_y + 0.5)
+                    
+                    target_x = int(raw_x + 0.5) 
+                    target_y = int(raw_y + 0.5) 
+                    
+                    # Draw a red dot at the target 
+                    cv2.circle(frame, (target_x, target_y), 5, (0, 0, 255), -1)
                     
                     print(f"Playing {selected_card} at {(raw_x, raw_y)}")
 
