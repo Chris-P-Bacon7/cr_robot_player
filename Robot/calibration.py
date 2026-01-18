@@ -113,7 +113,12 @@ def main():
     print("ENTER:  Save & Quit")
 
     cv2.namedWindow("Calibration Wizard", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Calibration Wizard", 450, 954)
+    
+    window_size = input("What window size would you like (small/large): ")
+    if window_size.lower() == "large":
+        cv2.resizeWindow("Calibration Wizard", 450, 954)
+    else:
+        cv2.resizeWindow("Calibration Wizardw", 375, 800)
 
     while True:
         frame = cap.get_screenshot()

@@ -25,7 +25,7 @@ class WindowCapture:
         # Define the capture area (skip title bar)
         title_bar_height = 60
         fgm_width = 20
-        fgm_height = 7
+        fgm_height = 8
 
         self.monitor = {
             "top": win.top + title_bar_height, 

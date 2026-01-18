@@ -63,8 +63,8 @@ class ElixirTracker:
 
             pixel = frame[py, px]
 
-            if i == 1:
-                print(f"Elixir 1 Colour: {pixel}") # Check what colour the bot sees.
+            # if i == 1:
+            #     print(f"Elixir 1 Colour: {pixel}") # Check what colour the bot sees.
 
             if self.is_purple(pixel):
                 current_elixir = i

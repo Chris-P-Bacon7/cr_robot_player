@@ -11,6 +11,7 @@ from window_capture import WindowCapture
 from controls import GameController
 from card_vision import CardVision
 from elixir_tracker import ElixirTracker
+from arena_vision import ArenaVision
 
 import ctypes
 try:
@@ -22,9 +23,11 @@ except Exception:
 arena_width = 18
 arena_height = 30
 phones = {
-    # "Riley": "SM-A536W",
+    # "riley": "SM-A536W",
     "riley": "SM-S936W",
-    "chris": "SM-S936W"}
+    "chris": "SM-S936W"
+    # "chris": "New Tab - Google Chrome"
+    }
 decks = {
     "riley": ["Fireball", "Bats", "SkeletonArmy", "Valkyrie", "Tesla", 
               "Musketeer_Hero", "Log", "HogRider"],
@@ -33,10 +36,10 @@ decks = {
 }
 
 def initialize_user(user):
-    global phone_name
+    global window_name
     global deck
 
-    phone_name = phones[user]
+    window_name = phones[user]
     deck = decks[user]
 
 def load_json_config():
@@ -107,11 +110,13 @@ if __name__ == "__main__":
     screen_config = load_config()
     raw_json = load_json_config()
 
-    cap = WindowCapture(phone_name)
+    cap = WindowCapture(window_name)
     mapper = ScreenMapper(screen_config)
     bot_controls = GameController(cap)
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
+    # Ensure this points to the correct troop detector class
+    arena_detector = ArenaVision("runs/detect/train/weights/best.pt")
 
     # Initialization
     card_keys = ["1", "2", "3", "4"]
@@ -136,20 +141,54 @@ if __name__ == "__main__":
         card_vision.load_template(card, "Robot\\assets\\cards", 0)
         
     cv2.namedWindow("Bot Vision", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Bot Vision", 450, 954) # Opens window at the same ratio as scrcpy
+    cv2.resizeWindow("Bot Vision", 450, 954)
     cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 0) # Makes window stay always on top (disabled)
     
+    # <--- CACHE STATIC GRID LINES (Pre-calculate to save CPU) --->
+    grid_lines = []
+    text_labels = []
+    
+    # Vertical Lines
+    for x in range(arena_width):
+        center_x = x + 0.5
+        p1 = mapper.tile_to_pixel(center_x, 0)
+        p2 = mapper.tile_to_pixel(center_x, arena_height)
+        grid_lines.append(p1)
+        grid_lines.append(p2)
+        
+        # Bottom numbers
+        if x % 2 == 0:
+            px, py = mapper.tile_to_pixel(center_x, arena_height)
+            text_labels.append((str(x), (px - 6, py - 8)))
+
+    # Horizontal Lines
+    for y in range(arena_height):
+        center_y = y + 0.5
+        p1 = mapper.tile_to_pixel(0, center_y)
+        p2 = mapper.tile_to_pixel(arena_width, center_y)
+        grid_lines.append(p1)
+        grid_lines.append(p2)
+        
+        # Side numbers
+        if y % 2 == 0:
+            px, py = mapper.tile_to_pixel(0, center_y)
+            text_labels.append((str(y), (px + 5, py + 5)))
+
     # <--- OPTIMIZATION: OPEN THREAD POOL ONCE HERE --->
     with ThreadPoolExecutor(max_workers=len(deck)) as executor:
         
+        frame_count = 0
+        arena_results = [] # Persist results between frames
+        
         while True:
             loop_start = time.time()
+            frame_count += 1
             
             # --- VISION ---
             try:
                 frame = cap.get_screenshot()
             except Exception as e:
-                print(f"Your scrcpy window was not open: {e}")
+                print(f"ERROR: Your scrcpy Window was not open.")
                 break
             if frame is None:
                 time.sleep(1)
@@ -159,8 +198,17 @@ if __name__ == "__main__":
             # 1. Get current Elixir
             current_elixir = elixir_tracker.get_elixir(frame)
 
+            # --- ARENA DETECTION (OPTIMIZED) ---
+            # Only run the heavy AI inference every 3rd frame (20 FPS is enough for logic)
+            # This frees up massive resources for the rest of the bot
+            if frame_count % 3 == 0:
+                arena_results = arena_detector.find_troops(frame)
+            
+            # Draw using the most recent results (so boxes don't flicker)
+            arena_detector.draw_detections(frame, arena_results)
+
             # --- CARD RECOGNITION (OPTIMIZED) ---
-            # 1. Define Region of Interest (Bottom 40% of screen)
+            # 1. Define Region of Interest (Bottom 14% of screen)
             h_frame, w_frame = frame.shape[:2]
             roi_top = int(h_frame * 0.86) 
             
@@ -193,36 +241,16 @@ if __name__ == "__main__":
             # Drawing Current Elixir
             cv2.putText(frame, f"Elixir: {current_elixir}", (10, 800),
                         cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1, (210, 60, 210), 2, cv2.LINE_4)
-            # cv2.circle(frame, (screen_config["elixir_top_left"][0], 
-            #                    screen_config["elixir_top_left"][1]), 3, (0, 0, 0))
 
-            # Draw Vertical Lines (Centers)
-            for x in range(arena_width):
-                # x + 0.5 is the center of the tile
-                center_x = x + 0.5
-                p1 = mapper.tile_to_pixel(center_x, 0)
-                p2 = mapper.tile_to_pixel(center_x, arena_height)
-                cv2.line(frame, p1, p2, (255, 255, 255), 1, cv2.LINE_AA) 
+            # Draw Cached Grid Lines (Faster than calculating every frame)
+            # We iterate by 2s since we stored p1, p2 sequentially
+            for i in range(0, len(grid_lines), 2):
+                cv2.line(frame, grid_lines[i], grid_lines[i+1], (255, 255, 255), 1, cv2.LINE_AA)
 
-            # Draw Horizontal Lines (Centers)
-            for y in range(arena_height):
-                center_y = y + 0.5
-                p1 = mapper.tile_to_pixel(0, center_y)
-                p2 = mapper.tile_to_pixel(arena_width, center_y)
-                cv2.line(frame, p1, p2, (255, 255, 255), 1, cv2.LINE_AA)
-
-            # Draw Numbers (At Centers)
-            for x in range(0, arena_width, 2):
-                px, py = mapper.tile_to_pixel(x + 0.5, arena_height)
-                location = (px - 6, py - 8)
-                cv2.putText(frame, str(x), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3, cv2.LINE_AA)
-                cv2.putText(frame, str(x), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
-
-            for y in range(0, arena_height, 2):
-                px, py = mapper.tile_to_pixel(0, y + 0.5)
-                location = (px + 5, py + 5)
-                cv2.putText(frame, str(y), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3, cv2.LINE_AA)
-                cv2.putText(frame, str(y), location, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+            # Draw Cached Numbers
+            for text, loc in text_labels:
+                cv2.putText(frame, text, loc, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3, cv2.LINE_AA)
+                cv2.putText(frame, text, loc, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
 
             # Draw Card Slots
             for i in range(1, 5):
