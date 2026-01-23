@@ -16,7 +16,7 @@ class ArenaVision:
     def find_troops(self, frame, threshold=0.5):
         # Turning verbose off prevents YOLO from spamming "Detected..."
         # each time it detects a new troop
-        results = self.model(frame, stream=True, conf=threshold, verbose=False)
+        results = list(self.model(frame, stream=True, conf=threshold, verbose=False))
         return results
     
     def draw_detections(self, frame, results):

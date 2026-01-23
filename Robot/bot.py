@@ -5,6 +5,7 @@ import time
 import json
 import os
 import threading
+import queue
 import random as rand
 from concurrent.futures import ThreadPoolExecutor
 from window_capture import WindowCapture 
@@ -44,14 +45,14 @@ def initialize_user(user):
 
 def load_json_config():
     if not os.path.exists("bot_config.json"):
-        print("❌ Error: 'bot_config.json' not found.")
+        print("ERROR: 'bot_config.json' not found.")
         return None
     with open("bot_config.json", "r") as f:
         return json.load(f)
 
 def load_config():
     if not os.path.exists("bot_config.json"):
-        print("❌ Error: 'bot_config.json' not found!")
+        print("ERROR: 'bot_config.json' not found!")
         exit()
         
     with open("bot_config.json", "r") as f:
@@ -87,26 +88,52 @@ def vision_worker(vision_obj, img, card_name):
     # Helper to run vision on a separate thread
     return card_name, vision_obj.find(img, card_name, threshold=0.750)
 
+def arena_ai_thread(detector, input_queue, output_queue):
+    while True:
+        try:
+            frame = input_queue.get(timeout=0.1)
+            
+            results = detector.find_troops(frame)
+        
+            if not output_queue.empty():
+                try: output_queue.get_nowait()
+                except queue.Empty: pass
+            
+            output_queue.put(results)
+    
+        except queue.Empty:
+            continue # Loop again if no frame received
+        except Exception as e:
+            print(f"AI Thread Error: {e}")
+
+
 # ================= MAIN LOOP =================
 if __name__ == "__main__":
-    user = input("Enter your name (Riley/Chris): ").lower()
-    time.sleep(0.5)
-    print(f"Welcome, {user.capitalize()}!")
-    time.sleep(0.75)
 
-    if user in phones:
-        initialize_user(user)
-    else:
-        print(f"{user.capitalize()}?")
-        time.sleep(1.5)
-        print(f"What kind of name is that?")
-        time.sleep(1.5)
-        print("Get the hell off of my program >:(")
-        time.sleep(1.5)
-        print(f"CRITICAL ERROR DETECTED -> Please see traceback: \n\
-              UserError: The program has terminated due to an ineligible user '{user.capitalize()}'.")
-        exit()
-        
+    # --- INITIALIZE USER ---
+    while True:
+        user = input("Enter your name (Riley/Chris): ").lower()
+        if user in phones:
+            initialize_user(user)
+            time.sleep(0.5)
+            print(f"Welcome, {user.capitalize()}!")
+            time.sleep(0.75)
+            break
+        elif user == "":
+            print("Oops...looks like you accidentally entered nothing!")
+            time.sleep(1.5)
+        else:
+            print(f"{user.capitalize()}?")
+            time.sleep(1.5)
+            print(f"What kind of name is that?")
+            time.sleep(1.5)
+            print("Get the hell off of my program >:(")
+            time.sleep(1.5)
+            print(f"CRITICAL ERROR DETECTED -> Please see traceback: \n\
+                UserError: The program has terminated due to an ineligible user '{user.capitalize()}'.")
+            exit()
+    
+    # --- INITIALIZE EVERYTHING ELSE ---
     screen_config = load_config()
     raw_json = load_json_config()
 
@@ -115,8 +142,21 @@ if __name__ == "__main__":
     bot_controls = GameController(cap)
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
-    # Ensure this points to the correct troop detector class
-    arena_detector = ArenaVision("runs/detect/train/weights/best.pt")
+    arena_detector = ArenaVision("runs\\detect\\train3\\weights\\best.onnx")
+    print("Loading YOLOv8 Detection Model...")
+
+    # Create Queues
+    ai_input_queue = queue.Queue(maxsize=1)
+    ai_output_queue = queue.Queue(maxsize=1) # 1 ensures the newest frame is processed only
+
+    # Start the Thread
+    ai_thread = threading.Thread(
+        target=arena_ai_thread,
+        args=(arena_detector, ai_input_queue, ai_output_queue),
+        daemon=True
+    )
+    ai_thread.start()
+    print("AI Background Thread Started!")
 
     # Initialization
     card_keys = ["1", "2", "3", "4"]
@@ -195,20 +235,25 @@ if __name__ == "__main__":
                 continue
 
             # --- ELIXIR TRACKING ---
-            # 1. Get current Elixir
             current_elixir = elixir_tracker.get_elixir(frame)
 
-            # --- ARENA DETECTION (OPTIMIZED) ---
-            # Only run the heavy AI inference every 3rd frame (20 FPS is enough for logic)
-            # This frees up massive resources for the rest of the bot
-            if frame_count % 3 == 0:
-                arena_results = arena_detector.find_troops(frame)
+            # --- ARENA DETECTION ---
+            # 1. Send current frame to the AI (Non-blocking)
+            if not ai_input_queue.full():
+                ai_input_queue.put(frame)
+
+            #2. Check for new results
+            try:
+                new_results = ai_output_queue.get_nowait()
+                arena_results = new_results
+            except queue.Empty:
+                pass # If no new update, keep old boxes
             
-            # Draw using the most recent results (so boxes don't flicker)
+            # Draw the arena results to keep the boxes on the screen
             arena_detector.draw_detections(frame, arena_results)
 
-            # --- CARD RECOGNITION (OPTIMIZED) ---
-            # 1. Define Region of Interest (Bottom 14% of screen)
+            # --- CARD RECOGNITION ---
+            # Track only bottom 14% of screen
             h_frame, w_frame = frame.shape[:2]
             roi_top = int(h_frame * 0.86) 
             
