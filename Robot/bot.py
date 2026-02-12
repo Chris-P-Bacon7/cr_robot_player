@@ -106,6 +106,30 @@ def arena_ai_thread(detector, input_queue, output_queue):
         except Exception as e:
             print(f"AI Thread Error: {e}")
 
+def card_vision_thread(vision_obj, deck_list, input_queue, output_queue):
+    while True:
+        try:
+            frame =input_queue.get(timeout=0.1)
+            h_frame, w_frame = frame.shape[:2]
+            roi_top = int(h_frame * 0.86) 
+            hand_view = frame[roi_top:h_frame, 0:w_frame]
+
+            current_hand = []
+            for card_name in deck_list:
+                matches = vision_obj.find(hand_view, card_name, threshold=0.750)
+                for ((x, y, w, h), score) in matches:
+                    real_y = y + roi_top
+                    current_hand.append((card_name, (x, real_y, w, h), score))
+            
+            if not output_queue.empty():
+                try: output_queue.get_nowait()
+                except queue.Empty: pass
+            output_queue.put(current_hand)
+            
+        except queue.Empty:
+            continue
+        except Exception as e:
+            print(f"Card Thread Error: {e}")
 
 # ================= MAIN LOOP =================
 if __name__ == "__main__":
@@ -142,7 +166,7 @@ if __name__ == "__main__":
     bot_controls = GameController(cap)
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
-    arena_detector = ArenaVision("runs\\detect\\train3\\weights\\best.onnx")
+    arena_detector = ArenaVision("runs\\detect\\train4\\weights\\best.onnx")
     print("Loading YOLOv8 Detection Model...")
 
     # Create Queues
@@ -183,6 +207,16 @@ if __name__ == "__main__":
     cv2.namedWindow("Bot Vision", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Bot Vision", 450, 954)
     cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 0) # Makes window stay always on top (disabled)
+
+    card_input_queue = queue.Queue(maxsize=1)
+    card_output_queue = queue.Queue(maxsize=1)
+
+    card_thread = threading.Thread(target=card_vision_thread,
+                                    args=(card_vision, deck, card_input_queue, card_output_queue),
+                                    daemon=True)
+    card_thread.start()
+    current_hand = []
+    print("Card Vision Thread Started.")
     
     # <--- CACHE STATIC GRID LINES (Pre-calculate to save CPU) --->
     grid_lines = []
@@ -234,8 +268,23 @@ if __name__ == "__main__":
                 time.sleep(1)
                 continue
 
+            # --- CARD DETECTION ---
+            if not card_input_queue.full():
+                card_input_queue.put(frame)
+            
+            try:
+                current_hand = card_output_queue.get_nowait()
+            except queue.Empty:
+                pass
+
+            for (card_name, (x, y, w, h), score) in current_hand:
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                cv2.putText(frame, f"{card_name}", (x, y - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
             # --- ELIXIR TRACKING ---
-            current_elixir = elixir_tracker.get_elixir(frame)
+            if frame_count % 10 == 0 or frame_count == 1:
+                current_elixir = elixir_tracker.get_elixir(frame)
 
             # --- ARENA DETECTION ---
             # 1. Send current frame to the AI (Non-blocking)
@@ -251,35 +300,6 @@ if __name__ == "__main__":
             
             # Draw the arena results to keep the boxes on the screen
             arena_detector.draw_detections(frame, arena_results)
-
-            # --- CARD RECOGNITION ---
-            # Track only bottom 14% of screen
-            h_frame, w_frame = frame.shape[:2]
-            roi_top = int(h_frame * 0.86) 
-            
-            # Create a view of just the hand area
-            hand_view = frame[roi_top:h_frame, 0:w_frame]
-
-            # 2. Submit ALL tasks first (Parallel execution)
-            futures = []
-            for card_name in deck:
-                futures.append(executor.submit(vision_worker, card_vision, hand_view, card_name))
-
-            # 3. Collect Results
-            for future in futures:
-                card_name, matches = future.result()
-                
-                for ((x, y, w, h), score) in matches:
-                    # <--- TRANSLATE COORDINATES BACK TO FULL SCREEN --->
-                    real_y = y + roi_top
-
-                    # Draw the box
-                    cv2.rectangle(frame, (x, real_y), (x + w, real_y + h), (0, 255, 0), 2)
-
-                    # Draw the Label and the Score
-                    label = f"{card_name} {score:.3f}"
-                    cv2.putText(frame, label, (x, real_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 
-                                0.5, (0, 255, 0), 2)
 
             # --- DRAWING ON BOT VISION ---
             

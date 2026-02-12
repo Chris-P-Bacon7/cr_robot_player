@@ -7,7 +7,7 @@ import os
 from window_capture import WindowCapture 
 
 # ================= CONFIGURATION =================
-WINDOW_NAME = "SM-S936W" 
+WINDOW_NAME = "Clash Royale - ZiqPlayz" 
 ARENA_WIDTH = 18
 ARENA_HEIGHT = 30
 # =================================================
