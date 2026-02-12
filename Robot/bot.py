@@ -36,6 +36,9 @@ decks = {
               "RoyalGhost", "Zap", "MagicArcher", "ElectroWizard"]
 }
 
+json_name = "Chris_S25.json"
+json_location = f"Robot\\config_files\\Chris_S25.json"
+
 def initialize_user(user):
     global window_name
     global deck
@@ -44,18 +47,18 @@ def initialize_user(user):
     deck = decks[user]
 
 def load_json_config():
-    if not os.path.exists("bot_config.json"):
-        print("ERROR: 'bot_config.json' not found.")
+    if not os.path.exists(json_location):
+        print(f"ERROR: \"{json_name}\" not found.")
         return None
-    with open("bot_config.json", "r") as f:
+    with open(json_location, "r") as f:
         return json.load(f)
 
 def load_config():
-    if not os.path.exists("bot_config.json"):
-        print("ERROR: 'bot_config.json' not found!")
+    if not os.path.exists(json_location):
+        print(f"ERROR: \"{json_name}\" not found.")
         exit()
         
-    with open("bot_config.json", "r") as f:
+    with open(json_location, "r") as f:
         data = json.load(f)
         
     config = {}
@@ -93,7 +96,7 @@ def arena_ai_thread(detector, input_queue, output_queue):
         try:
             frame = input_queue.get(timeout=0.1)
             
-            results = detector.find_troops(frame)
+            results = list(detector.find_troops(frame))
         
             if not output_queue.empty():
                 try: output_queue.get_nowait()
@@ -143,6 +146,39 @@ if __name__ == "__main__":
             print(f"Welcome, {user.capitalize()}!")
             time.sleep(0.75)
             break
+        elif user == "courtney":
+            print(".")
+            time.sleep(0.5)
+            print("..")
+            time.sleep(0.5)
+            print("...")
+            time.sleep(1)
+            print("Hey.")
+            time.sleep(2)
+            print("It's good to see you here.")
+            time.sleep(1.5)
+            print(".")
+            time.sleep(0.5)
+            print("..")
+            time.sleep(0.5)
+            print("...")
+            time.sleep(0.5)
+            print("But things will happen...")
+            time.sleep(2)
+            print("...won't they?")
+            time.sleep(1.5)
+            print("I don't know.")
+            time.sleep(1)
+            print(".")
+            time.sleep(0.5)
+            print("..")
+            time.sleep(0.5)
+            print("...")
+            time.sleep(1)
+            print("I'm hoping for the best.")
+            time.sleep(2)
+            print("UncertaintyError: Stack overflow in heart.exe. Process \"Confidence\" returned 0. Connection timed out... logic not found.")
+            exit()
         elif user == "":
             print("Oops...looks like you accidentally entered nothing!")
             time.sleep(1.5)
@@ -166,7 +202,7 @@ if __name__ == "__main__":
     bot_controls = GameController(cap)
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
-    arena_detector = ArenaVision("runs\\detect\\train4\\weights\\best.onnx")
+    arena_detector = ArenaVision("runs\\detect\\train2\\weights\\best.onnx")
     print("Loading YOLOv8 Detection Model...")
 
     # Create Queues
@@ -279,7 +315,7 @@ if __name__ == "__main__":
 
             for (card_name, (x, y, w, h), score) in current_hand:
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.putText(frame, f"{card_name}", (x, y - 10),
+                cv2.putText(frame, f"{card_name} {score * 100:.2f}%", (x, y - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             # --- ELIXIR TRACKING ---
