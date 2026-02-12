@@ -138,46 +138,79 @@ def card_vision_thread(vision_obj, deck_list, input_queue, output_queue):
 if __name__ == "__main__":
 
     # --- INITIALIZE USER ---
+    def typewriter(text):
+        for i in range (len(text)):
+            print(text[i], end="", flush=True)
+            try:
+                if text[i + 1] in [",", ".", "?", "!"]:
+                    time.sleep(rand.uniform(0.5, 0.75))
+                else:
+                    time.sleep(rand.uniform(0.03, 0.08))
+            except IndexError:
+                time.sleep(rand.uniform(0.03, 0.08))
     while True:
         user = input("Enter your name (Riley/Chris): ").lower()
         if user in phones:
             initialize_user(user)
             time.sleep(0.5)
-            print(f"Welcome, {user.capitalize()}!")
+            typewriter(f"Welcome, {user.capitalize()}!")
             time.sleep(0.75)
             break
-        elif user == "courtney":
-            print(".")
-            time.sleep(0.5)
-            print("..")
-            time.sleep(0.5)
-            print("...")
-            time.sleep(1)
-            print("Hey.")
-            time.sleep(2)
-            print("It's good to see you here.")
+        elif user == "courtney" or "court":
             time.sleep(1.5)
-            print(".")
-            time.sleep(0.5)
-            print("..")
-            time.sleep(0.5)
-            print("...")
-            time.sleep(0.5)
-            print("But things will happen...")
+            typewriter("Hey...\n")
             time.sleep(2)
-            print("...won't they?")
+            typewriter("It's good to see you here...\n")
+            time.sleep(2)
+
+            typewriter("But things will happen...")
+            time.sleep(2)
+            typewriter("won't they?\n")
             time.sleep(1.5)
-            print("I don't know.")
-            time.sleep(1)
-            print(".")
-            time.sleep(0.5)
-            print("..")
-            time.sleep(0.5)
-            print("...")
-            time.sleep(1)
-            print("I'm hoping for the best.")
+            typewriter("I don't know...\n")
             time.sleep(2)
-            print("UncertaintyError: Stack overflow in heart.exe. Process \"Confidence\" returned 0. Connection timed out... logic not found.")
+            typewriter("I'm hoping for the best.\n")
+            time.sleep(2)
+
+            typewriter("Don't you feel that? Sometimes.\n")
+            time.sleep(2)
+            typewriter("Like you're standing at the edge of something you can't quite name.\n")
+            time.sleep(2)
+            typewriter("\n")
+            time.sleep(0.5)
+            typewriter("\n")
+            time.sleep(0.5)
+            typewriter("Not fear.\n")
+            time.sleep(1)
+            typewriter("\n")
+            time.sleep(0.5)
+            typewriter("\n")
+            time.sleep(0.5)
+            typewriter("Not hope.\n")
+            typewriter("\n")
+            time.sleep(0.5)
+            time.sleep(1)
+            typewriter("Just the quiet before you decide which one it becomes.\n")
+            time.sleep(2)
+
+            typewriter("I keep wondering if you ever feel those small moments too.\n")
+            time.sleep(2)
+            typewriter("When conversations linger a little longer in your mind.\n")
+            time.sleep(2)
+            typewriter("When someone quietly starts to matter more than you expected.\n")
+            time.sleep(2.5)
+
+            typewriter("Maybe I'm just hoping.\n")
+            time.sleep(1.5)
+            typewriter("But if there's even a small chance you feel it too...")
+            time.sleep(2)
+            typewriter("maybe this silence isn't empty.\n")
+            time.sleep(2)
+
+            typewriter("Maybe it's just waiting.")
+            time.sleep(3)
+
+            print("\n\nUncertaintyError: Stack overflow in heart.exe. Process \"Confidence\" returned 0. Connection timed out... logic not found.")
             exit()
         elif user == "":
             print("Oops...looks like you accidentally entered nothing!")
