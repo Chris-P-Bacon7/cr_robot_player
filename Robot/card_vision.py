@@ -34,7 +34,7 @@ class CardVision:
             self.templates[name] = img
             print(f"✅ Learned pattern: {name}, {full_path}")
 
-    def find(self, haystack_img, template_name, threshold=0.8, debug_mode=False):
+    def find(self, haystack_img, template_name, threshold, debug_mode=False):
         """
         Scans the 'haystack' (screenshot) for the 'template'.
         Returns: A list of Rectangles (x, y, w, h) where matches were found.
