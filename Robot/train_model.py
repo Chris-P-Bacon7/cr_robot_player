@@ -12,23 +12,17 @@ dataset = version.download("yolov8")
 # ----------------------------------------
                 
 print("Dataset downloaded.")
-
-# 1. Load the YOLOv8 model
 model = YOLO('yolov8s.pt')
-
-# 2. Train the model
-# data: points to the yaml file downloaded by Roboflow
-# epochs: how many times it studies
-# imgsz: size of image
 print("Starting training...")
 
 results = model.train(
-    data=f"{dataset.location}/data.yaml",
-    epochs=50,
-    imgsz=1280,
-    batch=8,
-    patience=30,
-    plots=True
+    data=f"{dataset.location}/data.yaml", # Points to the yaml file downloaded
+    # via Roboflow
+    epochs=50, # Number of iterations
+    imgsz=1280, # Image size
+    batch=8, # How many to do at once (more = higher performance impact)
+    patience=30, # Stop if no progress made after certain iterations
+    plots=True # 
 )
 
-print("Training Complete!")
+print("Training Complete.")

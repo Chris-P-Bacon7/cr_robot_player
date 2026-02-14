@@ -13,10 +13,11 @@ class ArenaVision:
             print(f"Failed to load model: {e}")
             exit()
         
-    def find_troops(self, frame, threshold=0.5):
-        # Turning verbose off prevents YOLO from spamming "Detected..."
-        # each time it detects a new troop
-        results = list(self.model(frame, stream=True, conf=threshold, verbose=False))
+    def find_troops(self, frame, threshold=0.65):
+        # Convert BGR to RGB so YOLOv8 can read the screenshots properly
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        results = list(self.model(frame, stream=False, conf=threshold, verbose=False))
         return results
     
     def draw_detections(self, frame, results):
