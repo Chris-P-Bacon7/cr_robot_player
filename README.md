@@ -1,77 +1,118 @@
-hi
+# Clash Royale AI Bot 🤖👑
+
+A hybrid computer-vision bot for Clash Royale that uses **YOLOv8** for real-time object detection and **OpenCV** for UI analysis. It automatically recognizes enemy troops, calculates threats, manages Elixir, and deploys counters based on strategic logic.
+
+## 🚀 Key Features
+
+* **Dual-Layer Vision System:**
+* **YOLOv8 (ONNX):** Detects moving troops (Giants, Pekkas, etc.) with high performance.
+* **OpenCV:** Uses Template Matching to identify cards in hand and track Elixir levels.
 
 
-ADB is way too slow for real-time gameplay!
-
-It captures a screenshot on the phone, compresses it, sends to computer, then awaits processing before returning an input onto the phone
-
-
-
-Future Ideas:
-
-- Hand tracker
-
-- Elixir tracker (vision)
-
-- Alternative card vision approaches for optimization (e.g., use of AI, pixel colour (BGR) targeting)
+* **Intelligent Logic Engine:**
+* **Threat Assessment:** Prioritizes enemies closest to the bridge/tower.
+* **Counter System:** Automatically selects the best counter-card from your hand (e.g., *Pekka* vs. *Giant*).
+* **Elixir Management:** Checks costs before attempting to play.
 
 
-HOW TO COMMIT WORK TO GITHUB:
-# 1. Use GitHub Desktop
-On GitHub Desktop, commit changes, and push to origin (to your branch).
-# 2. Open a terminal in VSCode
-Run the command in terminal: git push origin "your-branch-name"
-------------------------------------------_
-HOW TO **CLEANLY** UPDATE MAIN WITH YOUR BRANCH:
-# 1. Push your latest work
-git push origin your-branch-name
+* **Precision Control:**
+* **Screen Mapping:** Converts raw pixels to in-game "Tile" coordinates for accurate placement.
+* **Multi-Threading:** Runs Vision, Logic, and Input on separate threads to minimize latency.
 
-# 2. Go to GitHub.com
-You will usually see a yellow bar at the top saying "Branch-Name had recent pushes..." 
-with a button that says "Compare & pull request".
 
-# 3. Create the PR
-Set the base to main and compare to Branch-Name
-Write a brief description of changes
-Click "Create pull request"
+* **Device Agnostic:** Works via `scrcpy`, supporting any Android device.
 
-# 4. Merge
-Click the green "Merge pull request"
--------------------------------------------
-HOW TO **FORCE** UPDATE MAIN WITH YOUR BRANCH:
-# 1. Switch to Main branch
-git checkout main
+## 🛠️ Prerequisites
 
-# 2. Update main
-git pull origin main
+* **Hardware:**
+* Android Device (Developer Mode + USB Debugging ON)
+* USB Data Cable
 
-# 3. Merge your branch into Main
-git merge your-branch-name
 
-# 4. Push the updated main back to GitHub
-git push origin main
--------------------------------------------
-HOW TO RETRIEVE FROM MAIN TO YOUR BRANCH:
-# 1. Ensure you are on your branch
-git checkout your-branch-name
+* **Software:**
+* [Python 3.10+](https://www.python.org/)
+* [Scrcpy](https://github.com/Genymobile/scrcpy) (Must be added to System PATH)
+* ADB (Android Debug Bridge)
 
-# 2. Pull changes from main directly into your branch
-git pull origin main
 
-# 3. Resolve any conflicts if prompted, then:
-git add .
-git commit -m "Sync with main"
 
--------------------------------------------
+## 📦 Installation
 
--------------------------------------------
-HOW TO UPDATE A FILE IN YOUR BRANCH FROM ANOTHER ONE:
-# 1. Fetch the latest data
-git fetch origin
+1. **Clone the Repository**
+```bash
+git clone https://github.com/yourusername/cr-robot-player.git
+cd cr-robot-player
 
-# 2. Overwrite the file with the other branch's version
-git checkout other-branch-name -- path/to/your/file.ext
--------------------------------------------
-COMPARE YOUR VERSION OF A FILE WITH ANOTHER ONE:
-# 1. Enter the following in terminal
-git diff head other-branch-name -- path/to/your/file.ext
+```
+
+
+2. **Install Dependencies**
+It is recommended to use a virtual environment.
+```bash
+pip install -r requirements.txt
+
+```
+
+
+*(If you don't have a requirements file yet, install these manually):*
+```bash
+pip install ultralytics opencv-python numpy keyboard pywin32
+
+```
+
+
+3. **Prepare the Model**
+Place your trained YOLO weights (converted to ONNX for speed) in the directory:
+`runs/detect/train4/weights/best.onnx`
+4. **Asset Setup**
+Ensure your card templates (screenshots of cards in your hand) are stored in:
+`Robot/assets/cards/`
+
+## ⚙️ Configuration
+
+The bot uses JSON files to map screen coordinates to your specific device resolution.
+
+1. Navigate to `Robot/config_files/`.
+2. Create or edit a config file (e.g., `Chris_S25.json`) with your device's specific anchor points:
+* **Arena Bounds:** Top-Left, Top-Right, Bottom-Left, Bottom-Right.
+* **Card Slots:** Coordinates for the 4 card slots.
+* **Elixir Bar:** Coordinates for reading elixir.
+
+
+
+## 🎮 Usage
+
+1. **Connect your Phone** via USB.
+2. **Start Scrcpy** (optimized for low latency):
+```bash
+scrcpy --max-fps 40 --bit-rate 4M --render-driver opengl
+
+```
+
+
+3. **Run the Bot**:
+```bash
+python Robot/main.py
+
+```
+
+
+4. **Select User**: Type your name (e.g., "chris") to load your specific deck and config.
+
+## 🧠 Bot Logic (How it thinks)
+
+The `BotLogic` class processes data in 3 steps:
+
+1. **Detection:** YOLO identifies all objects on screen. The bot parses names like `Enemy-Giant-Walk`.
+2. **Filtering:** It ignores enemies that haven't crossed the bridge (y > 0.45) to save Elixir.
+3. **Reaction:**
+* Identifies the biggest threat (closest to bottom).
+* Checks `counter_chart` for a matching counter in the current hand.
+* Verifies Elixir availability.
+* Places the troop directly on the threat's coordinates.
+
+
+
+## ⚠️ Disclaimer
+
+This project is for **educational purposes only**. Using automation tools in online games likely violates the Terms of Service of Supercell. Use at your own risk. The creator is not responsible for banned accounts.
