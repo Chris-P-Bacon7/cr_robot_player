@@ -1,4 +1,3 @@
-import math
 
 counter_chart = {
     # This will be the default defending & counterpushing strategy for the bot
@@ -10,7 +9,8 @@ counter_chart = {
     "DarkPrince": [["Bandit", "ElectroWizard"], ["Pekka", "RoyalGhost"]],
     "ElectroWizard": [["Bandit", "RoyalGhost"], 
                       ["ElectroWizard", "MagicArcher"], ["Fireball"]],
-    "Balloon": [["ElectroWizard", "MagicArcher"], ["Fireball"]]
+    "Balloon": [["ElectroWizard", "MagicArcher"], ["Fireball"]],
+    "Bat": [["MagicArcher", "Electrowizard"], ["Zap"]]
 }
 
 elixir_stat = {
@@ -66,7 +66,8 @@ class BotLogic:
             cx = int((x1 + x2) / 2)
             cy = int((y1 + y2) / 2)
 
-            if "Enemy" in team:
+            if team == "Enemy" and troop not in ("PrincessTower", "KingTower"):
+                if cy > self.crossed_bridge:
                     threats.append({
                         "Troop": troop,
                         "x": cx,
@@ -81,9 +82,14 @@ class BotLogic:
             return None # No threats = Do nothing
         
         most_dangerous = threats[0]
+        enemy_name = most_dangerous["Troop"]
 
         # 2. Decide counter
-        counter_options = [x for x in counter_chart[most_dangerous][0]]
+        if enemy_name not in counter_chart: # Make sure we have a counter
+            print(f"LOGIC WARNING: No defined counter for {enemy_name}.")
+            return None
+
+        counter_options = counter_chart[enemy_name][0]
         available_cards = [card[0] for card in current_hand]
         
         for card_name in counter_options:

@@ -9,7 +9,7 @@ import queue
 import random as rand
 from concurrent.futures import ThreadPoolExecutor
 from window_capture import WindowCapture 
-from controls import GameController
+from game_controller import GameController
 from card_vision import CardVision
 from elixir_tracker import ElixirTracker
 from arena_vision import ArenaVision
@@ -27,8 +27,8 @@ arena_height = 30
 phones = {
     "riley": "SM-A536W",
     # "riley": "SM-S936W",
-    # "chris": "SM-S936W"
-    "chris": "Clash Royale - ZiqPlayz"
+    "chris": "SM-S936W"
+    # "chris": "Clash Royale - ZiqPlayz"
     }
 decks = {
     "riley": ["Fireball", "Bats", "SkeletonArmy", "Valkyrie", "Tesla", 
@@ -37,7 +37,7 @@ decks = {
               "RoyalGhost", "Zap", "MagicArcher", "ElectroWizard"]
 }
 
-json_name = "gplay_games.json"
+json_name = "Chris_S25.json"
 json_location = f"Robot\\config_files\\{json_name}"
 
 def initialize_user(user):
@@ -89,17 +89,46 @@ def get_active_key(valid_keys):
             return key
     return None
 
-def vision_worker(vision_obj, img, card_name):
-    # Helper to run vision on a separate thread
-    return card_name, vision_obj.find(img, card_name, threshold=0.700)
+def get_slot_from_name(card_name, current_hand, screen_config):
+    # Find the card's vision data in hand
+    target_card = None
+    for card in current_hand:
+        if card[0] == card_name:
+            target_card = card
+            break
+
+    if not target_card:
+        return None # Report card not found in hand
+    
+    card_x = target_card[1][0]
+    best_slot = None
+    min_dist = 9999
+
+    for i in range(1, 5):
+        slot_key = f"card_{i}"
+        if slot_key in screen_config:
+            slot_x, _ = screen_config[slot_key]
+            dist = abs(card_x - slot_x)
+            if dist < min_dist:
+                min_dist = dist
+                best_slot = str(i)
+    
+    return best_slot
 
 def arena_ai_thread(detector, input_queue, output_queue):
     while True:
         try:
             frame = input_queue.get(timeout=0.1)
             
+            # Removes redundant items in the queue
+            while not input_queue.empty():
+                try:
+                    frame = input_queue.get_nowait() 
+                except queue.Empty:
+                    pass
+
             results = list(detector.find_troops(frame))
-        
+
             if not output_queue.empty():
                 try: output_queue.get_nowait()
                 except queue.Empty: pass
@@ -111,7 +140,7 @@ def arena_ai_thread(detector, input_queue, output_queue):
         except Exception as e:
             print(f"AI Thread Error: {e}")
 
-def card_vision_thread(vision_obj, deck_list, input_queue, output_queue):
+def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
     while True:
         try:
             frame =input_queue.get(timeout=0.1)
@@ -121,7 +150,7 @@ def card_vision_thread(vision_obj, deck_list, input_queue, output_queue):
 
             current_hand = []
             for card_name in deck_list:
-                matches = vision_obj.find(hand_view, card_name, threshold=0.750)
+                matches = card_vision.find(hand_view, card_name, threshold=0.700)
                 for ((x, y, w, h), score) in matches:
                     real_y = y + roi_top
                     current_hand.append((card_name, (x, real_y, w, h), score))
@@ -168,7 +197,7 @@ if __name__ == "__main__":
         if user in phones:
             initialize_user(user)
             time.sleep(0.5)
-            typewriter(f"Welcome, {user.capitalize()}!")
+            typewriter(f"Welcome, {user.capitalize()}!\n")
             time.sleep(0.75)
             break
         elif user == "courtney" or user == "court":
@@ -265,6 +294,7 @@ if __name__ == "__main__":
     screen_config = load_config()
     raw_json = load_json_config()
 
+    # Initialize all classes
     cap = WindowCapture(window_name)
     mapper = ScreenMapper(screen_config)
     bot_controls = GameController(cap)
@@ -277,7 +307,6 @@ if __name__ == "__main__":
     bot_logic = BotLogic()
     names_map = arena_detector.model.names
     
-
     # Create Queues
     ai_input_queue = queue.Queue(maxsize=1)
     ai_output_queue = queue.Queue(maxsize=1) # 1 ensures the newest frame is processed only
@@ -419,9 +448,29 @@ if __name__ == "__main__":
                 move = bot_logic.get_best_move(detections, current_hand, current_elixir, names_map)
 
                 if move:
-                    card_name, (target_x, target_y) = move
-                    print(f"BOT LOGIC: Countering with {card_name} at ({target_x}, {target_y})")
+                    target_name, (target_x, target_y) = move
                     
+                    # Convert pixels to tiles
+                    tile_x, tile_y = mapper.pixel_to_tile(target_x, target_y)
+
+                    # Find which slot contains the card
+                    slot_num = get_slot_from_name(target_name, current_hand, screen_config)
+
+                    if slot_num:
+                        print(f"Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}).")
+
+                        def action_task(slot, loc):
+                            bot_state["is_acting"] = True
+                            try:
+                                time.sleep(rand.uniform(0.05, 0.1))
+                                bot_controls.play_card(f"card_{slot}", loc, screen_config)
+                            except Exception as e:
+                                print(f"Action Failed: {e}.")
+                            bot_state["is_acting"] = False
+                        
+                        threading.Thread(target=action_task, args=(slot_num, (tile_x, tile_y))).start()
+                    else:
+                        print(f"LOGIC ERROR: Wanted to play {target_name}, but couldn't find the slot.")
 
             # --- DRAWING ON BOT VISION ---
             
