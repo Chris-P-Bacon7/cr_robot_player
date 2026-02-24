@@ -4,7 +4,7 @@ import os
 from window_capture import WindowCapture
 
 windcap = WindowCapture("SM-S936W")
-data_path = 'Robot\\assets\\raw_images'
+data_path = 'assets\\raw_images'
 if not os.path.exists(data_path):
     os.makedirs(data_path)
 

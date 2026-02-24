@@ -14,6 +14,7 @@ from card_vision import CardVision
 from elixir_tracker import ElixirTracker
 from arena_vision import ArenaVision
 from bot_logic import BotLogic
+from screen_mapper import ScreenMapper
 
 import ctypes
 try:
@@ -150,7 +151,7 @@ def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
 
             current_hand = []
             for card_name in deck_list:
-                matches = card_vision.find(hand_view, card_name, threshold=0.700)
+                matches = card_vision.find(hand_view, card_name, threshold=0.500)
                 for ((x, y, w, h), score) in matches:
                     real_y = y + roi_top
                     current_hand.append((card_name, (x, real_y, w, h), score))
@@ -164,30 +165,6 @@ def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
             continue
         except Exception as e:
             print(f"Card Thread Error: {e}")
-
-class ScreenMapper:
-    def __init__(self, config):
-        self.src_points = np.float32([[0, 0], [arena_width, 0], [0, arena_height], [arena_width, arena_height]])
-        self.dst_points = np.float32([
-            config["arena_top_left"], config["arena_top_right"], 
-            config["arena_bottom_left"], config["arena_bottom_right"]
-        ])
-        self.matrix = cv2.getPerspectiveTransform(self.src_points, self.dst_points)
-
-    def tile_to_pixel(self, tile_x, tile_y):
-        point = np.array([[[tile_x, tile_y]]], dtype=np.float32)
-        transformed = cv2.perspectiveTransform(point, self.matrix)
-        return (int(transformed[0][0][0]), int(transformed[0][0][1]))
-    
-    def pixel_to_tile(self, px, py):
-        inv_matrix = np.linalg.inv(self.matrix)
-        point = np.array([[[px, py]]], dtype=np.float32)
-        transformed = cv2.perspectiveTransform(point, inv_matrix)
-
-        tile_x = transformed[0][0][0]
-        tile_y = transformed[0][0][1]
-        
-        return (tile_x, tile_y)
 
 # ================= MAIN LOOP =================
 if __name__ == "__main__":
@@ -296,13 +273,12 @@ if __name__ == "__main__":
 
     # Initialize all classes
     cap = WindowCapture(window_name)
-    mapper = ScreenMapper(screen_config)
+    mapper = ScreenMapper(screen_config, arena_height, arena_width)
     bot_controls = GameController(cap)
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
     
     arena_detector = ArenaVision("runs\\detect\\train4\\weights\\best.onnx")
-    print("Loading YOLOv8 Detection Model...")
 
     bot_logic = BotLogic()
     names_map = arena_detector.model.names
@@ -318,7 +294,7 @@ if __name__ == "__main__":
         daemon=True
     )
     ai_thread.start()
-    print("AI Background Thread Started!")
+    print("AI Background Thread Started.")
 
     # Initialization
     card_keys = ["1", "2", "3", "4"]
@@ -340,7 +316,7 @@ if __name__ == "__main__":
     print(f"Pos keys: {pos_keys}")
 
     for card in deck:
-        card_vision.load_template(card, "Robot\\assets\\cards", 0)
+        card_vision.load_template(card, "assets\\cards\\full_colour", 0)
         
     cv2.namedWindow("Bot Vision", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Bot Vision", 450, 954)

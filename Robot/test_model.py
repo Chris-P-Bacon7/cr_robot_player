@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     model = YOLO(model_path)
 
-    img_path = "Robot\\assets\\raw_images\\Game_7\\clash_gameplay_77.png"
+    img_path = "assets\\raw_images\\Game_7\\clash_gameplay_77.png"
     print(f"Looking at {img_path}...")
     results = model(img_path)
 

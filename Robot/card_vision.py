@@ -29,10 +29,10 @@ class CardVision:
         img = cv2.imread(full_path, cv2.IMREAD_COLOR)
         
         if img is None:
-            print(f"❌ Error: Could not find image at '{image_path}'")
+            print(f"Error: Could not find image at '{image_path}'")
         else:
             self.templates[name] = img
-            print(f"✅ Learned pattern: {name}, {full_path}")
+            print(f"- Learned pattern: {name}, {full_path}")
 
     def find(self, haystack_img, template_name, threshold, debug_mode=False):
         """
@@ -48,7 +48,9 @@ class CardVision:
 
         # 1. Run the matching algorithm
         # TM_CCOEFF_NORMED is the best all-rounder. 1.0 = Perfect Match, 0.0 = No Match.
-        result = cv2.matchTemplate(haystack_img, needle_img, cv2.TM_CCOEFF_NORMED)
+        gray_frame = cv2.cvtColor(haystack_img, cv2.COLOR_BGR2GRAY)
+        gray_template = cv2.cvtColor(needle_img)
+        result = cv2.matchTemplate(gray_frame, gray_template, cv2.TM_CCOEFF_NORMED)
 
         # 2. Filter out weak matches
         locations = np.where(result >= threshold)
