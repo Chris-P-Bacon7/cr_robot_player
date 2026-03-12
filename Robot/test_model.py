@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import cv2
 import os
 
-model_path = "runs\\detect\\train4\\weights\\best.onnx"
+model_path = "runs\\detect\\train7\\weights\\best.pt"
 
 if __name__ == "__main__":
 
@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     model = YOLO(model_path)
 
-    img_path = "assets\\raw_images\\Game_7\\clash_gameplay_77.png"
+    img_path = "assets\\raw_images\\Game_7\\clash_gameplay_3.png"
     print(f"Looking at {img_path}...")
     results = model(img_path)
 
@@ -20,7 +20,8 @@ if __name__ == "__main__":
     cv2.namedWindow("YOLO Vision", cv2.WINDOW_NORMAL)
 
     while True:
-        window_size = input("What window size would you like (small/large): ")
+        # window_size = input("What window size would you like (small/large): ")
+        window_size = "small"
         if window_size.lower() == "large":
             cv2.resizeWindow("YOLO Vision", 450, 954)
             break

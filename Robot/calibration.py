@@ -204,15 +204,15 @@ def main():
     }
 
     print("\nSaving to 'bot_config.json'...")
-    if os.path.exists("bot_config.json"):
-        with open("bot_config.json", "r") as f:
+    if os.path.exists("Robot\\config_files\\bot_config.json"):
+        with open("Robot\\config_files\\bot_config.json", "r") as f:
             try: current_data = json.load(f)
             except json.JSONDecodeError: current_data = {} 
     else: current_data = {}
 
     current_data.update(config_data)
 
-    with open("bot_config.json", "w") as f:
+    with open("Robot\\config_files\\bot_config.json", "w") as f:
         json.dump(current_data, f, indent=4)
     print("✅ Configuration Updated!")
 

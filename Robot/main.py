@@ -7,6 +7,7 @@ import os
 import threading
 import queue
 import random as rand
+import ctypes
 from concurrent.futures import ThreadPoolExecutor
 from window_capture import WindowCapture 
 from game_controller import GameController
@@ -16,7 +17,6 @@ from arena_vision import ArenaVision
 from bot_logic import BotLogic
 from screen_mapper import ScreenMapper
 
-import ctypes
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
 except Exception:
@@ -29,24 +29,18 @@ phones = {
     "riley": "SM-A536W",
     # "riley": "SM-S936W",
     "chris": "SM-S936W"
-    # "chris": "Clash Royale - ZiqPlayz"
+    # "chris": "Winter 2026 Calendar"
     }
 decks = {
     "riley": ["Fireball", "Bats", "SkeletonArmy", "Valkyrie", "Tesla", 
               "Musketeer_Hero", "Log", "HogRider"],
     "chris": ["Fireball", "PEKKA", "Bandit", "BattleRam",
-              "RoyalGhost", "Zap", "MagicArcher", "ElectroWizard"]
+              "RoyalGhost", "Zap", "MagicArcher", "ElectroWizard",
+              "GoldenKnight"]
 }
 
 json_name = "Chris_S25.json"
 json_location = f"Robot\\config_files\\{json_name}"
-
-def initialize_user(user):
-    global window_name
-    global deck
-
-    window_name = phones[user]
-    deck = decks[user]
 
 def typewriter(text):
         length = len(text)
@@ -146,12 +140,12 @@ def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
         try:
             frame =input_queue.get(timeout=0.1)
             h_frame, w_frame = frame.shape[:2]
-            roi_top = int(h_frame * 0.86) 
+            roi_top = int(h_frame * 0.86)
             hand_view = frame[roi_top:h_frame, 0:w_frame]
 
             current_hand = []
             for card_name in deck_list:
-                matches = card_vision.find(hand_view, card_name, threshold=0.500)
+                matches = card_vision.find(hand_view, card_name, threshold=0.700)
                 for ((x, y, w, h), score) in matches:
                     real_y = y + roi_top
                     current_hand.append((card_name, (x, real_y, w, h), score))
@@ -172,12 +166,13 @@ if __name__ == "__main__":
     while True:
         user = input(typewriter("Enter your name: ")).lower()
         if user in phones:
-            initialize_user(user)
+            window_name = phones[user]
+            deck = decks[user]
             time.sleep(0.5)
             typewriter(f"Welcome, {user.capitalize()}!\n")
             time.sleep(0.75)
             break
-        elif user == "courtney" or user == "court":
+        elif user == "easter" or user == "egg":
             time.sleep(1.5)
             typewriter("Hey...\n")
             time.sleep(1.5)
@@ -278,7 +273,7 @@ if __name__ == "__main__":
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
     
-    arena_detector = ArenaVision("runs\\detect\\train4\\weights\\best.onnx")
+    arena_detector = ArenaVision("runs\\detect\\train7\\weights\\best.onnx")
 
     bot_logic = BotLogic()
     names_map = arena_detector.model.names
@@ -286,8 +281,8 @@ if __name__ == "__main__":
     # Create Queues
     ai_input_queue = queue.Queue(maxsize=1)
     ai_output_queue = queue.Queue(maxsize=1) # 1 ensures the newest frame is processed only
-
-    # Start the Thread
+    
+    # Initialize Threads
     ai_thread = threading.Thread(
         target=arena_ai_thread,
         args=(arena_detector, ai_input_queue, ai_output_queue),
@@ -296,10 +291,23 @@ if __name__ == "__main__":
     ai_thread.start()
     print("AI Background Thread Started.")
 
-    # Initialization
+    card_input_queue = queue.Queue(maxsize=1)
+    card_output_queue = queue.Queue(maxsize=1)
+
+    card_thread = threading.Thread(target=card_vision_thread,
+                                    args=(card_vision, deck, card_input_queue, card_output_queue),
+                                    daemon=True)
+    card_thread.start()
+    current_hand = []
+    print("Card Vision Thread Started.")
+
+    # Initialize Config
     card_keys = ["1", "2", "3", "4"]
     pos_map = {}
     pos_keys = []
+
+    last_save_time = 0
+    save_cooldown = 0.5
 
     if "location" in raw_json:
         for name, data in raw_json["location"].items():
@@ -311,26 +319,14 @@ if __name__ == "__main__":
     selected_card = None
     bot_state = {"is_acting": False}
 
-    print(f"Configuration Loaded.")
-    print(f"Card Keys: {card_keys}")
-    print(f"Pos keys: {pos_keys}")
-
     for card in deck:
         card_vision.load_template(card, "assets\\cards\\full_colour", 0)
         
+    # Initialize Window
     cv2.namedWindow("Bot Vision", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Bot Vision", 450, 954)
-    cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 0) # Makes window stay always on top (disabled)
-
-    card_input_queue = queue.Queue(maxsize=1)
-    card_output_queue = queue.Queue(maxsize=1)
-
-    card_thread = threading.Thread(target=card_vision_thread,
-                                    args=(card_vision, deck, card_input_queue, card_output_queue),
-                                    daemon=True)
-    card_thread.start()
-    current_hand = []
-    print("Card Vision Thread Started.")
+    cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 1) # Pushes window to front but prevents it
+    cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 0) # from staying on top
     
     # <--- CACHE STATIC GRID LINES (Pre-calculate to save CPU) --->
     grid_lines = []
@@ -372,7 +368,7 @@ if __name__ == "__main__":
             loop_start = time.time()
             frame_count += 1
             
-            # --- VISION ---
+            # --- BOT VISION WINDOW ---
             try:
                 frame = cap.get_screenshot()
             except Exception as e:
@@ -383,9 +379,9 @@ if __name__ == "__main__":
                 continue
 
             # --- CARD DETECTION ---
-            if not card_input_queue.full():
+            if not card_input_queue.full() and frame_count % 5 == 0:
                 card_input_queue.put(frame)
-            
+
             try:
                 current_hand = card_output_queue.get_nowait()
             except queue.Empty:
@@ -393,7 +389,7 @@ if __name__ == "__main__":
 
             for (card_name, (x, y, w, h), score) in current_hand:
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.putText(frame, f"{card_name} {score * 100:.2f}%", (x, y - 10),
+                cv2.putText(frame, f"{card_name} {score * 100:.1f}%", (x, y - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             # --- ELIXIR TRACKING ---
@@ -402,7 +398,7 @@ if __name__ == "__main__":
 
             # --- ARENA DETECTION ---
             # 1. Send current frame to the AI (Non-blocking)
-            if not ai_input_queue.full():
+            if frame_count % 5 == 0 and not ai_input_queue.full():
                 ai_input_queue.put(frame.copy())
 
             #2. Check for new results
@@ -416,15 +412,37 @@ if __name__ == "__main__":
             arena_detector.draw_detections(frame, arena_results)
 
             # --- BOT LOGIC ---
-            if len(arena_results) > 0 and not bot_state["is_acting"]: # Bot only acts if not busy and there are detections
+            if len(arena_results) > 0 and not bot_state["is_acting"]: 
                 # Extract boxes
                 detections = arena_results[0].boxes
+                
+                # # <--- HARD NEGATIVE MINING --->
+                # current_time = time.time()
+                # if current_time - last_save_time > save_cooldown:
+                #     for box in detections:
+                #         conf = float(box.conf[0])
+                        
+                #         # If YOLO26 is "unsure" (between 25% and 60% confident)
+                #         if 0.25 < conf < 0.60:
+                #             # Save the RAW frame (before we draw green boxes on it)
+                #             # We use the raw frame so it is clean for labeling later
+                #             timestamp = int(current_time * 1000)
+                #             filename = f"assets\\raw_images\\low_confidence\\unsure_frame_{timestamp}_conf_{conf:.2f}.png"
+                            
+                #             # cap.get_screenshot() gets the clean frame from your WindowCapture class
+                #             clean_frame = cap.get_screenshot() 
+                #             if clean_frame is not None:
+                #                 cv2.imwrite(filename, clean_frame)
+                #                 print(f"Saved Hard Negative. Confidence was {conf:.2f}")
+                #                 last_save_time = current_time
+                #                 break # Only save the frame once, even if multiple troops are unsure
+                # <--- END NEW --->
                 
                 # Ask the brain to make a move
                 move = bot_logic.get_best_move(detections, current_hand, current_elixir, names_map)
 
                 if move:
-                    target_name, (target_x, target_y) = move
+                    target_name, (target_x, target_y), enemy_name = move
                     
                     # Convert pixels to tiles
                     tile_x, tile_y = mapper.pixel_to_tile(target_x, target_y)
@@ -433,13 +451,13 @@ if __name__ == "__main__":
                     slot_num = get_slot_from_name(target_name, current_hand, screen_config)
 
                     if slot_num:
-                        print(f"Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}).")
+                        print(f"Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) to counter {enemy_name}.")
 
                         def action_task(slot, loc):
                             bot_state["is_acting"] = True
                             try:
                                 time.sleep(rand.uniform(0.05, 0.1))
-                                bot_controls.play_card(f"card_{slot}", loc, screen_config)
+                                bot_controls.play_card(f"card_{slot}", loc, screen_config, mapper)
                             except Exception as e:
                                 print(f"Action Failed: {e}.")
                             bot_state["is_acting"] = False
@@ -484,47 +502,53 @@ if __name__ == "__main__":
                 cv2.putText(frame, "BUSY", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
             cv2.imshow("Bot Vision", frame)
-            if cv2.waitKey(1) == ord('q'): break
-
-            # ----- CONTROLS LOGIC ------
-            pressed_card = get_active_key(card_keys)
-            if pressed_card:
-                selected_card = pressed_card
-                print(f"Card {selected_card} Selected! Waiting for position...")
-                time.sleep(0.15)
             
-            pressed_pos = get_active_key(pos_keys)
+            # --- PROGRAM TERMINATION ---
+            try:
+                if cv2.waitKey(1) == ord('q'): break
+            except KeyboardInterrupt:
+                typewriter("\n\nExiting program...")
+                break
+
+            #  ----- CONTROLS LOGIC (UNUSED) ------
+            # pressed_card = get_active_key(card_keys)
+            # if pressed_card:
+            #     selected_card = pressed_card
+            #     print(f"Card {selected_card} Selected! Waiting for position...")
+            #     time.sleep(0.15)
             
-            if pressed_pos:
-                if selected_card is None:
-                    print("No Card Selected. Press 1-4 first.")
-                    time.sleep(0.15)
-                elif not bot_state["is_acting"]:
-                    # <--- KEY CHANGE: OFFSET TARGET TO TILE CENTER --->
-                    raw_x, raw_y = pos_map[pressed_pos]
-                    # Adding 0.5 ensures we click the visual center of the tile
-                    target_loc = (raw_x + 0.5, raw_y + 0.5)
+            # pressed_pos = get_active_key(pos_keys)
+            
+            # if pressed_pos:
+            #     if selected_card is None:
+            #         print("No Card Selected. Press 1-4 first.")
+            #         time.sleep(0.15)
+            #     elif not bot_state["is_acting"]:
+            #         # <--- KEY CHANGE: OFFSET TARGET TO TILE CENTER --->
+            #         raw_x, raw_y = pos_map[pressed_pos]
+            #         # Adding 0.5 ensures we click the visual center of the tile
+            #         target_loc = (raw_x + 0.5, raw_y + 0.5)
                     
-                    target_x = int(raw_x + 0.5) 
-                    target_y = int(raw_y + 0.5) 
+            #         target_x = int(raw_x + 0.5) 
+            #         target_y = int(raw_y + 0.5) 
                     
-                    # Draw a red dot at the target 
-                    cv2.circle(frame, (target_x, target_y), 5, (0, 0, 255), -1)
+            #         # Draw a red dot at the target 
+            #         cv2.circle(frame, (target_x, target_y), 5, (0, 0, 255), -1)
                     
-                    print(f"Playing {selected_card} at {(raw_x, raw_y)}")
+            #         print(f"Playing {selected_card} at {(raw_x, raw_y)}")
 
-                    def action_task(card, loc):
-                        bot_state["is_acting"] = True
-                        try:
-                            bot_controls.play_card(f"card_{card}", loc, screen_config, mapper)
-                        except Exception as e:
-                            print(f"Action Failed: {e}")
-                        bot_state["is_acting"] = False
+            #         def action_task(card, loc):
+            #             bot_state["is_acting"] = True
+            #             try:
+            #                 bot_controls.play_card(f"card_{card}", loc, screen_config, mapper)
+            #             except Exception as e:
+            #                 print(f"Action Failed: {e}")
+            #             bot_state["is_acting"] = False
 
-                    t = threading.Thread(target=action_task, args=(selected_card, target_loc))
-                    t.start()
+            #         t = threading.Thread(target=action_task, args=(selected_card, target_loc))
+            #         t.start()
                     
-                    selected_card = None
-                    time.sleep(0.15)
-    
+            #         selected_card = None
+            #         time.sleep(0.15)
+    print("\n\nProgram successfully terminated.")
     cv2.destroyAllWindows()

@@ -1,0 +1,1 @@
+1. In bot_logic.py, complete load_counters() function

@@ -1,13 +1,17 @@
 from roboflow import Roboflow
 from ultralytics import YOLO
+import os
+import dotenv
 
+dotenv.load_dotenv(os.path.join("Robot", ".env"))
 
 # --- Paste snippet from Roboflow here ---
 
-rf = Roboflow(api_key="LSC1PpIYHkNpDrA9KdvL")
+my_key = os.getenv("ROBOFLOW_API_KEY")
+rf = Roboflow(api_key=my_key)
 project = rf.workspace("automated-game-bot").project("clashroyale-bot-v1")
-version = project.version(5)
-dataset = version.download("yolov8")
+version = project.version(8)
+dataset = version.download("yolo26")
                 
 # ----------------------------------------
                 
@@ -18,11 +22,12 @@ print("Starting training...")
 results = model.train(
     data=f"{dataset.location}/data.yaml", # Points to the yaml file downloaded
     # via Roboflow
-    epochs=50, # Number of iterations
-    imgsz=1280, # Image size
-    batch=8, # How many to do at once (more = higher performance impact)
+    epochs=300, # Number of iterations
+    imgsz=640, # Image size
+    batch=4, # How many to do at once (more = higher performance impact)
+    device="cpu", # Forces Intel i7 to be used, increasing stability
     patience=30, # Stop if no progress made after certain iterations
-    plots=True # 
+    plots=True # Save training plots and charts
 )
 
 print("Training Complete.")

@@ -48,8 +48,12 @@ class CardVision:
 
         # 1. Run the matching algorithm
         # TM_CCOEFF_NORMED is the best all-rounder. 1.0 = Perfect Match, 0.0 = No Match.
+
+        # gray_frame = haystack_img
+        # gray_template = needle_img
+
         gray_frame = cv2.cvtColor(haystack_img, cv2.COLOR_BGR2GRAY)
-        gray_template = cv2.cvtColor(needle_img)
+        gray_template = cv2.cvtColor(needle_img, cv2.COLOR_BGR2GRAY)
         result = cv2.matchTemplate(gray_frame, gray_template, cv2.TM_CCOEFF_NORMED)
 
         # 2. Filter out weak matches
@@ -79,7 +83,3 @@ class CardVision:
             final_result.append(((x, y, w, h), confidence))
 
         return final_result
-    
-
-if __name__ == "__main__":
-    pass

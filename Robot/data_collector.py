@@ -23,5 +23,7 @@ while True:
         count += 1
         loop_time = time.time()
     
-    if cv2.waitKey(1) == ord("q"):
-        break
+    try:
+        continue
+    except KeyboardInterrupt:
+        print("Exiting data collector...")

@@ -1,27 +1,49 @@
+import os
+import json
 
-counter_chart = {
-    # This will be the default defending & counterpushing strategy for the bot
-    # Format: "EnemyTroop": [[Primary counters], [Secondary counters], [Spell if close to tower (optional)]]
-    "Giant": [["Pekka"], ["ElectroWizard", "Bandit", "RoyalGhost"]],
-    "Night_Witch": [["MagicArcher", "RoyalGhost"], ["Bandit", "ElectroWizard"]],
-    "Firecracker": [["RoyalGhost", "Bandit"], 
-                    ["MagicArcher", "ElectroWizard"], ["Fireball"]],
-    "DarkPrince": [["Bandit", "ElectroWizard"], ["Pekka", "RoyalGhost"]],
-    "ElectroWizard": [["Bandit", "RoyalGhost"], 
-                      ["ElectroWizard", "MagicArcher"], ["Fireball"]],
-    "Balloon": [["ElectroWizard", "MagicArcher"], ["Fireball"]],
-    "Bat": [["MagicArcher", "Electrowizard"], ["Zap"]]
-}
+json_name = "card_database.json"
+json_location = f"Robot\\config_files\\{json_name}"
+
+def load_counters():
+    if not os.path.exists(json_location):
+        print(f"ERROR: \"{json_name}\" not found.")
+        exit()
+    
+    with open(json_location, "r") as f:
+        data = json.load(f)
+    
+    counter_chart = {} # INCOMPLETE CODE. WILL FINISH LATER
+
+    return counter_chart
+
+
+
+counter_chart = load_counters()
+# {
+#     # This will be the default defending & counterpushing strategy for the bot
+#     # Format: "EnemyTroop": [[Primary counters], [Secondary counters], [Spell if close to tower (optional)]]
+#     "Giant": [["PEKKA"], ["ElectroWizard", "Bandit", "RoyalGhost"]],
+#     "Night_Witch": [["MagicArcher", "GoldenKnight", "RoyalGhost"], ["Bandit", "ElectroWizard"]],
+#     "Firecracker": [["RoyalGhost", "GoldenKnight", "Bandit"], 
+#                     ["MagicArcher", "ElectroWizard"], ["Fireball"]],
+#     "DarkPrince": [["Bandit", "GoldenKnight", "ElectroWizard"], ["PEKKA", "RoyalGhost"]],
+#     "ElectroWizard": [["Bandit", "RoyalGhost"], 
+#                       ["ElectroWizard", "MagicArcher"], ["Fireball"]],
+#     "Balloon": [["ElectroWizard", "MagicArcher"], ["Fireball"]],
+
+#     "Bat": [["MagicArcher", "Electrowizard"], ["Zap"]]
+# }
 
 elixir_stat = {
-    "Pekka": 7,
+    "PEKKA": 7,
     "ElectroWizard": 4,
     "Bandit": 3,
     "RoyalGhost": 3,
     "MagicArcher": 4,
     "BattleRam": 4,
     "Fireball": 4,
-    "Zap": 2
+    "Zap": 2,
+    "GoldenKnight": 4
 }
 
 class BotLogic:
@@ -100,6 +122,6 @@ class BotLogic:
                     play_x = most_dangerous["x"]
                     play_y = most_dangerous["y"]
 
-                    return (card_name, (play_x, play_y))
+                    return (card_name, (play_x, play_y), most_dangerous["Troop"])
         
         return None

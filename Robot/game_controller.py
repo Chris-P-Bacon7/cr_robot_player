@@ -2,6 +2,7 @@ import pyautogui
 import time
 import random
 
+
 pyautogui.FAILSAFE = True
 
 class GameController:
@@ -51,7 +52,7 @@ class GameController:
         
         sx, sy = self._get_global_coords(field_x, field_y)
         if sx:
-            pyautogui.moveTo(sx, sy)#, duration=random.uniform(0.15, 0.35))
+            pyautogui.moveTo(sx, sy, duration=random.uniform(0.15, 0.35))
             
         # time.sleep(random.uniform(0.1, 0.15)) 
         pyautogui.click()
