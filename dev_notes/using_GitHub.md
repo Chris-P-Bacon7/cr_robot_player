@@ -1,5 +1,4 @@
 **HOW TO COMMIT WORK TO GITHUB:**
-
 -------------------------------------
 # 1. Use GitHub Desktop
 On GitHub Desktop, commit changes, and push to origin (to your branch).
@@ -22,7 +21,7 @@ Click "Create pull request"
 # 4. Merge
 Click the green "Merge pull request"
 -------------------------------------------
-HOW TO **FORCE** UPDATE MAIN WITH YOUR BRANCH:
+HOW TO **FORCE** UPDATE MAIN WITH YOUR BRANCH (NOT RECOMMENDED):
 # 1. Switch to Main branch
 git checkout main
 
