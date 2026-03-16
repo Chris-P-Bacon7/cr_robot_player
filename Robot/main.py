@@ -9,13 +9,13 @@ import queue
 import random as rand
 import ctypes
 from concurrent.futures import ThreadPoolExecutor
-from window_capture import WindowCapture 
-from game_controller import GameController
-from card_vision import CardVision
-from elixir_tracker import ElixirTracker
-from arena_vision import ArenaVision
-from bot_logic import BotLogic
-from screen_mapper import ScreenMapper
+from perception.window_capture import WindowCapture 
+from automation.game_controller import GameController
+from perception.card_vision import CardVision
+from perception.elixir_tracker import ElixirTracker
+from perception.arena_vision import ArenaVision
+from automation.bot_logic import BotLogic
+from perception.screen_mapper import ScreenMapper
 
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -36,11 +36,11 @@ decks = {
               "Musketeer_Hero", "Log", "HogRider"],
     "chris": ["Fireball", "PEKKA", "Bandit", "BattleRam",
               "RoyalGhost", "Zap", "MagicArcher", "ElectroWizard",
-              "GoldenKnight"]
+              "GoldenKnight", "Poison"]
 }
 
 json_name = "Chris_S25.json"
-json_location = f"Robot\\config_files\\{json_name}"
+json_location = f"robot\\{json_name}"
 
 def typewriter(text):
         length = len(text)
@@ -84,10 +84,10 @@ def get_active_key(valid_keys):
             return key
     return None
 
-def get_slot_from_name(card_name, current_hand, screen_config):
+def get_slot_from_name(card_name, raw_hand, screen_config):
     # Find the card's vision data in hand
     target_card = None
-    for card in current_hand:
+    for card in raw_hand:
         if card[0] == card_name:
             target_card = card
             break
@@ -138,29 +138,38 @@ def arena_ai_thread(detector, input_queue, output_queue):
 def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
     while True:
         try:
-            frame =input_queue.get(timeout=0.1)
+            frame = input_queue.get(timeout=0.1)
             h_frame, w_frame = frame.shape[:2]
             roi_top = int(h_frame * 0.86)
             hand_view = frame[roi_top:h_frame, 0:w_frame]
 
-            current_hand = []
+            raw_hand = []
             for card_name in deck_list:
                 matches = card_vision.find(hand_view, card_name, threshold=0.700)
                 for ((x, y, w, h), score) in matches:
                     real_y = y + roi_top
-                    current_hand.append((card_name, (x, real_y, w, h), score))
+                    raw_hand.append((card_name, (x, real_y, w, h), score))
             
             if not output_queue.empty():
                 try: output_queue.get_nowait()
                 except queue.Empty: pass
-            output_queue.put(current_hand)
+            output_queue.put(raw_hand)
             
         except queue.Empty:
             continue
         except Exception as e:
             print(f"Card Thread Error: {e}")
 
-# ================= MAIN LOOP =================
+def action_thread(slot, loc):
+                            bot_state["is_acting"] = True
+                            try:
+                                time.sleep(rand.uniform(0.05, 0.1))
+                                bot_controls.play_card(f"card_{slot}", loc, screen_config, mapper)
+                            except Exception as e:
+                                print(f"Action Failed: {e}.")
+                            bot_state["is_acting"] = False
+
+# ================= MAIN LOOP ====================
 if __name__ == "__main__":
     # --- INITIALIZE USER ---
     while True:
@@ -272,10 +281,9 @@ if __name__ == "__main__":
     bot_controls = GameController(cap)
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
-    
-    arena_detector = ArenaVision("runs\\detect\\train7\\weights\\best.onnx")
+    bot_logic = BotLogic(decks[user])
 
-    bot_logic = BotLogic()
+    arena_detector = ArenaVision("runs\\detect\\train7\\weights\\best.onnx")
     names_map = arena_detector.model.names
     
     # Create Queues
@@ -298,7 +306,7 @@ if __name__ == "__main__":
                                     args=(card_vision, deck, card_input_queue, card_output_queue),
                                     daemon=True)
     card_thread.start()
-    current_hand = []
+    raw_hand = []
     print("Card Vision Thread Started.")
 
     # Initialize Config
@@ -360,9 +368,11 @@ if __name__ == "__main__":
 
     # --- LOOPED ELEMENTS BEGIN HERE ---
     with ThreadPoolExecutor(max_workers=len(deck)) as executor:
-        
+        failure_count = 0
         frame_count = 0
+        current_elixir = 0
         arena_results = [] # Persist results between frames
+        persistent_hand = {}
         
         while True:
             loop_start = time.time()
@@ -372,9 +382,12 @@ if __name__ == "__main__":
             try:
                 frame = cap.get_screenshot()
             except Exception as e:
-                print(f"ERROR: Your Window: \"{window_name}\" was not open.")
-                break
-            if frame is None:
+                print(f"ERROR: Your Window: \"{window_name}\" is not open. Trying again.\n")
+
+                failure_count += 1
+                if failure_count > 30:
+                    print(f"ERROR: Your session timed out because \"{window_name}\" took too long to open.")
+                    break
                 time.sleep(1)
                 continue
 
@@ -383,10 +396,31 @@ if __name__ == "__main__":
                 card_input_queue.put(frame)
 
             try:
-                current_hand = card_output_queue.get_nowait()
+                raw_hand = card_output_queue.get_nowait()
             except queue.Empty:
-                pass
+                raw_hand = []
+            
+            # 1. Update persistent memory with any new cards seen
+            current_time = time.time()
+            for (card_name, (x, y, w, h), score) in raw_hand:
+                persistent_hand[card_name] = {
+                    "rect": (x, y, w, h),
+                    "score": score,
+                    "last_seen": current_time
+                }
+            
+            current_hand = []
+            cards_to_remove = []
 
+            # 2. If a card isn't seen in 2 seconds, it is removed from persistent hand
+            for card_name in persistent_hand:
+                if current_time - persistent_hand[card_name]["last_seen"] > 1.0:
+                    cards_to_remove.append(card_name)
+                else:
+                    current_hand.append((card_name, persistent_hand[card_name]["rect"], 
+                                         persistent_hand[card_name]["score"]))
+
+            # 3. Draw the detections
             for (card_name, (x, y, w, h), score) in current_hand:
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 cv2.putText(frame, f"{card_name} {score * 100:.1f}%", (x, y - 10),
@@ -416,28 +450,6 @@ if __name__ == "__main__":
                 # Extract boxes
                 detections = arena_results[0].boxes
                 
-                # # <--- HARD NEGATIVE MINING --->
-                # current_time = time.time()
-                # if current_time - last_save_time > save_cooldown:
-                #     for box in detections:
-                #         conf = float(box.conf[0])
-                        
-                #         # If YOLO26 is "unsure" (between 25% and 60% confident)
-                #         if 0.25 < conf < 0.60:
-                #             # Save the RAW frame (before we draw green boxes on it)
-                #             # We use the raw frame so it is clean for labeling later
-                #             timestamp = int(current_time * 1000)
-                #             filename = f"assets\\raw_images\\low_confidence\\unsure_frame_{timestamp}_conf_{conf:.2f}.png"
-                            
-                #             # cap.get_screenshot() gets the clean frame from your WindowCapture class
-                #             clean_frame = cap.get_screenshot() 
-                #             if clean_frame is not None:
-                #                 cv2.imwrite(filename, clean_frame)
-                #                 print(f"Saved Hard Negative. Confidence was {conf:.2f}")
-                #                 last_save_time = current_time
-                #                 break # Only save the frame once, even if multiple troops are unsure
-                # <--- END NEW --->
-                
                 # Ask the brain to make a move
                 move = bot_logic.get_best_move(detections, current_hand, current_elixir, names_map)
 
@@ -452,17 +464,7 @@ if __name__ == "__main__":
 
                     if slot_num:
                         print(f"Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) to counter {enemy_name}.")
-
-                        def action_task(slot, loc):
-                            bot_state["is_acting"] = True
-                            try:
-                                time.sleep(rand.uniform(0.05, 0.1))
-                                bot_controls.play_card(f"card_{slot}", loc, screen_config, mapper)
-                            except Exception as e:
-                                print(f"Action Failed: {e}.")
-                            bot_state["is_acting"] = False
-                        
-                        threading.Thread(target=action_task, args=(slot_num, (tile_x, tile_y))).start()
+                        threading.Thread(target=action_thread, args=(slot_num, (tile_x, tile_y))).start()
                     else:
                         print(f"LOGIC ERROR: Wanted to play {target_name}, but couldn't find the slot.")
 
