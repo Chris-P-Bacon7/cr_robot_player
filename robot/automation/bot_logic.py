@@ -1,4 +1,9 @@
 import os
+import sys
+
+# Tell Python to look one folder up for imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import json
 from perception.screen_mapper import ScreenMapper
 
@@ -110,8 +115,10 @@ class BotLogic:
             cx = int((x1 + x2) / 2)
             cy = int((y1 + y2) / 2)
 
+            tile_x, tile_y = self.screen_mapper.pixel_to_tile(cx, cy)
+
             if team == "Enemy" and troop not in ("PrincessTower", "KingTower"):
-                if cy > self.crossed_bridge:
+                if tile_y > self.crossed_bridge:
                     threats.append({
                         "Troop": troop,
                         "x": cx,
@@ -133,24 +140,23 @@ class BotLogic:
             print(f"LOGIC WARNING: No defined counter for {enemy_name}.")
             return None
 
+        card_counters = []
+        spell_counters = []
+
         for card in self.counter_chart[enemy_name]["primary"]:
-            primary_counters = card
+            card_counters.append(card)
         for card in self.counter_chart[enemy_name]["secondary"]:
-            secondary_counters = card
+            card_counters.append(card)
         for card in self.counter_chart[enemy_name]["spell"]:
-            spell_counters = card
-
-        """
-        Need to finish code
-        """
-
+            spell_counters.append(card)
+        
         available_cards = [card[0] for card in current_hand]
         elixir_stat = {}
 
         for card in self.data["cards"]:
             elixir_stat[f"{card}"] = self.data["cards"][f"{card}"]["elixir"]
-
-        for card_name in counter_options:
+        
+        for card_name in card_counters:
             if card_name in available_cards:
                 cost = elixir_stat[card_name]
                 enemy_x = most_dangerous["x"]
@@ -177,7 +183,7 @@ class BotLogic:
                     
                     play_x, play_y = self.screen_mapper.tile_to_pixel(play_x, play_y)
                     
-                    return (card_name, (play_x, play_y), most_dangerous["Troop"])
+                    return (card_name, (play_x, play_y), most_dangerous)
     
         return None
     
@@ -217,3 +223,4 @@ if __name__ == "__main__":
         if card in current_hand:
             elixir_stat[f"{card}"] = bot_logic.data["cards"][f"{card}"]["elixir"]
     print(elixir_stat)
+    
