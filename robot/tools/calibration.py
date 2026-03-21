@@ -203,18 +203,22 @@ def main():
         }
     }
 
-    print("\nSaving to 'bot_config.json'...")
-    if os.path.exists("robot\\bot_config.json"):
-        with open("robot\\bot_config.json", "r") as f:
-            try: current_data = json.load(f)
-            except json.JSONDecodeError: current_data = {} 
-    else: current_data = {}
+    save_path = input("\nEnter the path/filename to save the config to (e.g., bot_config.json) or leave empty to skip saving: ").strip()
+    
+    if save_path:
+        if os.path.exists(save_path):
+            with open(save_path, "r") as f:
+                try: current_data = json.load(f)
+                except json.JSONDecodeError: current_data = {} 
+        else: current_data = {}
 
-    current_data.update(config_data)
+        current_data.update(config_data)
 
-    with open("robot\\bot_config.json", "w") as f:
-        json.dump(current_data, f, indent=4)
-    print("✅ Configuration Updated!")
+        with open(save_path, "w") as f:
+            json.dump(current_data, f, indent=4)
+        print(f"✅ Configuration Updated in {save_path}!")
+    else:
+        print("Skipped saving configuration.")
 
 if __name__ == "__main__":
     main()

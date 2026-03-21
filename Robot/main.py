@@ -16,6 +16,7 @@ from perception.elixir_tracker import ElixirTracker
 from perception.arena_vision import ArenaVision
 from automation.bot_logic import BotLogic
 from perception.screen_mapper import ScreenMapper
+from automation.score import Score
 
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -35,8 +36,7 @@ decks = {
     "riley": ["Fireball", "Bats", "SkeletonArmy", "Valkyrie", "Tesla", 
               "Musketeer_Hero", "Log", "HogRider"],
     "chris": ["Fireball", "PEKKA", "Bandit", "BattleRam",
-              "RoyalGhost", "Zap", "MagicArcher", "ElectroWizard",
-              "GoldenKnight", "Poison"]
+              "RoyalGhost", "Zap", "MagicArcher", "ElectroWizard"]
 }
 
 json_name = "Chris_S25.json"
@@ -146,9 +146,18 @@ def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
             raw_hand = []
             for card_name in deck_list:
                 matches = card_vision.find(hand_view, card_name, threshold=0.700)
+                
+                if os.path.exists(f"assets\\cards\\full_colour\\Card_{card_name}_Evo"):
+                    card_name = f"{card_name}_Evo"
+                    matches = card_vision.find(hand_view, card_name, threshold=0.700)
+                elif os.path.exists(f"assets\\cards\\full_colour\\Card_{card_name}_Hero"):
+                    card_name = f"{card_name}_Hero"
+                    matches = card_vision.find(hand_view, card_name, threshold=0.700)
+                
                 for ((x, y, w, h), score) in matches:
                     real_y = y + roi_top
-                    raw_hand.append((card_name, (x, real_y, w, h), score))
+                    raw_hand.append((card_name, (x, real_y, w, h), score))   
+                
             
             if not output_queue.empty():
                 try: output_queue.get_nowait()
@@ -160,20 +169,41 @@ def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
         except Exception as e:
             print(f"Card Thread Error: {e}")
 
+def socre_vision_thread(score_tracker, input_queue, output_queue):
+    while True:
+        try:
+            frame = input_queue.get(timeout=0.1)
+
+            while not input_queue.empty():
+                try: frame = input_queue.get_nowait()
+                except queue.Empty: pass
+            
+            health_data = score_tracker.tower_state(frame)
+
+            if not output_queue.empty():
+                try: output_queue.get_nowait()
+                except queue.Empty: pass
+            output_queue.put(health_data)
+        except queue.Empty:
+            continue
+        except Exception as e:
+            print(f"Score Thread Error: {e}")
+
 def action_thread(slot, loc):
-                            bot_state["is_acting"] = True
-                            try:
-                                time.sleep(rand.uniform(0.05, 0.1))
-                                bot_controls.play_card(f"card_{slot}", loc, screen_config, mapper)
-                            except Exception as e:
-                                print(f"Action Failed: {e}.")
-                            bot_state["is_acting"] = False
+    bot_state["is_acting"] = True
+    try:
+        time.sleep(rand.uniform(0.05, 0.1))
+        bot_controls.play_card(f"card_{slot}", loc, screen_config, mapper)
+    except Exception as e:
+        print(f"Action Failed: {e}.")
+    bot_state["is_acting"] = False
 
 # ================= MAIN LOOP ====================
 if __name__ == "__main__":
     # --- INITIALIZE USER ---
     while True:
-        user = input(typewriter("Enter your name: ")).lower()
+        # user = input(typewriter("Enter your name: ")).lower()
+        user = "chris"
         if user in phones:
             window_name = phones[user]
             deck = decks[user]
@@ -276,19 +306,23 @@ if __name__ == "__main__":
     raw_json = load_json_config()
 
     # Initialize all classes
-    cap = WindowCapture(window_name)
+    cap = WindowCapture(window_name, json_location)
     mapper = ScreenMapper(screen_config, arena_height, arena_width)
     bot_controls = GameController(cap)
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
     bot_logic = BotLogic(decks[user])
+    score_tracker = Score(json_name, json_location)
 
     arena_detector = ArenaVision("runs\\detect\\train7\\weights\\best.onnx")
     names_map = arena_detector.model.names
-    
+
     # Create Queues
     ai_input_queue = queue.Queue(maxsize=1)
     ai_output_queue = queue.Queue(maxsize=1) # 1 ensures the newest frame is processed only
+
+    score_output_queue = queue.Queue(maxsize=1)
+    score_input_queue = queue.Queue(maxsize=1)
     
     # Initialize Threads
     ai_thread = threading.Thread(
@@ -309,6 +343,14 @@ if __name__ == "__main__":
     raw_hand = []
     print("Card Vision Thread Started.")
 
+    score_thread = threading.Thread(
+        target=socre_vision_thread,
+        args=(score_tracker, score_input_queue, score_output_queue),
+        daemon=True
+    )
+    score_thread.start()
+    print("Score Thread Started.")
+
     # Initialize Config
     card_keys = ["1", "2", "3", "4"]
     pos_map = {}
@@ -327,15 +369,31 @@ if __name__ == "__main__":
     selected_card = None
     bot_state = {"is_acting": False}
 
+    cards_path = "assets\\cards\\full_colour"
+    num_cards = 0
     for card in deck:
-        card_vision.load_template(card, "assets\\cards\\full_colour", 0)
+        card_vision.load_template(card, cards_path, 0)
+        num_cards += 1
         
+        evo_path = os.path.join(cards_path, f"Card_{card}_Evo.png")
+        hero_path = os.path.join(cards_path, f"Card_{card}_Hero.png")
+
+        template_mode = 0
+        if os.path.exists(evo_path):
+            card_vision.load_template(card, cards_path, 1)
+            num_cards += 1
+
+        if os.path.exists(hero_path):
+            card_vision.load_template(card, cards_path, 2)
+            num_cards += 1
+
+    
     # Initialize Window
     cv2.namedWindow("Bot Vision", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Bot Vision", 450, 954)
     cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 1) # Pushes window to front but prevents it
     cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 0) # from staying on top
-    
+
     # <--- CACHE STATIC GRID LINES (Pre-calculate to save CPU) --->
     grid_lines = []
     text_labels = []
@@ -367,12 +425,20 @@ if __name__ == "__main__":
             text_labels.append((str(y), (px + 5, py + 5)))
 
     # --- LOOPED ELEMENTS BEGIN HERE ---
-    with ThreadPoolExecutor(max_workers=len(deck)) as executor:
+    with ThreadPoolExecutor(max_workers=num_cards) as executor:
         failure_count = 0
         frame_count = 0
         current_elixir = 0
         arena_results = [] # Persist results between frames
         persistent_hand = {}
+        current_scores = {}
+        
+        # --- INITIALIZE WINDOW POSITIONS ---
+        cv2.namedWindow("Bot Vision")
+        cv2.moveWindow("Bot Vision", 10, 10)  # Top-left corner
+        
+        # cv2.namedWindow("Match Evaluation")
+        # cv2.moveWindow("Match Evaluation", 10, 800)  # Bottom-left (Adjust 800 up/down based on your screen height)
         
         while True:
             loop_start = time.time()
@@ -454,7 +520,7 @@ if __name__ == "__main__":
                 move = bot_logic.get_best_move(detections, current_hand, current_elixir, names_map)
 
                 if move:
-                    target_name, (target_x, target_y), enemy_name = move
+                    target_name, (target_x, target_y), enemy = move
                     
                     # Convert pixels to tiles
                     tile_x, tile_y = mapper.pixel_to_tile(target_x, target_y)
@@ -463,10 +529,39 @@ if __name__ == "__main__":
                     slot_num = get_slot_from_name(target_name, current_hand, screen_config)
 
                     if slot_num:
-                        print(f"Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) to counter {enemy_name}.")
+                        print(f"Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) to counter {enemy['Troop']} ({enemy['x']},{enemy['y']})).")
                         threading.Thread(target=action_thread, args=(slot_num, (tile_x, tile_y))).start()
                     else:
                         print(f"LOGIC ERROR: Wanted to play {target_name}, but couldn't find the slot.")
+
+            # # --- SCORE ---
+            # if frame_count % 30 == 0 and not score_input_queue.full():
+            #     score_input_queue.put(frame.copy())
+            
+            # try:
+            #     new_scores = score_output_queue.get_nowait()
+            #     current_scores = new_scores
+            # except queue.Empty:
+            #     pass
+            
+            # # Evaluation Window
+            # eval_frame = np.full((400, 300, 3), 30, dtype=np.uint8)
+            # cv2.putText(eval_frame, "EVALUATION", (40, 30), 
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            
+            # y_offset = 80
+            # for tower_name, hp in current_scores.items():
+            #     display_name = tower_name.replace("_health", "").replace("_", " ").title()
+            #     hp_text = str(hp) if hp is not None else "???"
+            #     colour = (100, 100, 255) if "Enemy" in display_name else (255, 150, 50)
+
+            #     cv2.putText(eval_frame, f"{display_name}: {hp_text}", (20, y_offset), 
+            #                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, colour, 2)
+                
+            #     y_offset += 40
+            
+            # cv2.imshow("Match Evaluation", eval_frame)
+            
 
             # --- DRAWING ON BOT VISION ---
             
@@ -509,48 +604,7 @@ if __name__ == "__main__":
             try:
                 if cv2.waitKey(1) == ord('q'): break
             except KeyboardInterrupt:
-                typewriter("\n\nExiting program...")
                 break
 
-            #  ----- CONTROLS LOGIC (UNUSED) ------
-            # pressed_card = get_active_key(card_keys)
-            # if pressed_card:
-            #     selected_card = pressed_card
-            #     print(f"Card {selected_card} Selected! Waiting for position...")
-            #     time.sleep(0.15)
-            
-            # pressed_pos = get_active_key(pos_keys)
-            
-            # if pressed_pos:
-            #     if selected_card is None:
-            #         print("No Card Selected. Press 1-4 first.")
-            #         time.sleep(0.15)
-            #     elif not bot_state["is_acting"]:
-            #         # <--- KEY CHANGE: OFFSET TARGET TO TILE CENTER --->
-            #         raw_x, raw_y = pos_map[pressed_pos]
-            #         # Adding 0.5 ensures we click the visual center of the tile
-            #         target_loc = (raw_x + 0.5, raw_y + 0.5)
-                    
-            #         target_x = int(raw_x + 0.5) 
-            #         target_y = int(raw_y + 0.5) 
-                    
-            #         # Draw a red dot at the target 
-            #         cv2.circle(frame, (target_x, target_y), 5, (0, 0, 255), -1)
-                    
-            #         print(f"Playing {selected_card} at {(raw_x, raw_y)}")
-
-            #         def action_task(card, loc):
-            #             bot_state["is_acting"] = True
-            #             try:
-            #                 bot_controls.play_card(f"card_{card}", loc, screen_config, mapper)
-            #             except Exception as e:
-            #                 print(f"Action Failed: {e}")
-            #             bot_state["is_acting"] = False
-
-            #         t = threading.Thread(target=action_task, args=(selected_card, target_loc))
-            #         t.start()
-                    
-            #         selected_card = None
-            #         time.sleep(0.15)
-    print("\n\nProgram successfully terminated.")
+    print("Program successfully terminated.")
     cv2.destroyAllWindows()

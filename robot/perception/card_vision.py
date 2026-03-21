@@ -17,11 +17,11 @@ class CardVision:
         # cv2.IMREAD_UNCHANGED would include transparency (alpha), which we usually strip for matching
         
         filename = f"Card_{name}"
-        
+
         if evo_hero == 1:
-            filename = f"{name}_Evolution"
+            filename = f"Card_{name}_Evo"
         elif evo_hero == 2:
-            filename = f"{name}_Hero"
+            filename = f"Card_{name}_Hero"
         
         filename = f"{filename}.png"
         full_path = os.path.join(image_path, filename)
@@ -31,8 +31,15 @@ class CardVision:
         if img is None:
             print(f"Error: Could not find image at '{image_path}'")
         else:
-            self.templates[name] = img
-            print(f"- Learned pattern: {name}, {full_path}")
+            if evo_hero == 1:
+                self.templates[f"{name}_Evo"] = img
+                print(f"- Learned pattern: {name}, {full_path}")
+            elif evo_hero == 2:
+                self.templates[f"{name}_Hero"] = img
+                print(f"- Learned pattern: {name}, {full_path}")
+            else:
+                self.templates[name] = img
+                print(f"- Learned pattern: {name}, {full_path}")
 
     def find(self, haystack_img, template_name, threshold, debug_mode=False):
         """

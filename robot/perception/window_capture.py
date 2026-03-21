@@ -6,10 +6,13 @@ import json
 import os
 
 class WindowCapture:
-    def __init__(self, window_title_keyword):
+    def __init__(self, window_title_keyword, json_file):
         self.window_title = window_title_keyword
+        self.json_save = json_file
         self.monitor = None
         self.sct = mss.mss()
+        self.config_path_prompted = False
+        self.config_save_path = ""
         self.update_window_position()
 
     def update_window_position(self):
@@ -40,14 +43,14 @@ class WindowCapture:
 
     def _save_window_config(self):
         new_data = {"window": self.monitor}
-        if os.path.exists("bot_config.json"):
-            with open("bot_config.json", "r") as f:
+        if os.path.exists(self.json_save):
+            with open(self.json_save, "r") as f:
                 try: current = json.load(f)
                 except: current = {}
         else: current = {}
         
         current.update(new_data)
-        with open("bot_config.json", "w") as f:
+        with open(self.json_save, "w") as f:
             json.dump(current, f, indent=4)
 
     def get_screenshot(self):
