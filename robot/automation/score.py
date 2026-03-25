@@ -47,7 +47,7 @@ class Score:
 
                 inverted = cv2.bitwise_not(binary)
 
-                result = self.reader.readtext(inverted, allowlist='0123456789', detail=0)
+                result = self.reader.readtext(inverted, allowlist='0123456789')
 
                 if len(result) > 0:
                     raw_text = result[0][1]

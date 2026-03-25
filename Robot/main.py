@@ -146,14 +146,7 @@ def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
             raw_hand = []
             for card_name in deck_list:
                 matches = card_vision.find(hand_view, card_name, threshold=0.700)
-                
-                if os.path.exists(f"assets\\cards\\full_colour\\Card_{card_name}_Evo"):
-                    card_name = f"{card_name}_Evo"
-                    matches = card_vision.find(hand_view, card_name, threshold=0.700)
-                elif os.path.exists(f"assets\\cards\\full_colour\\Card_{card_name}_Hero"):
-                    card_name = f"{card_name}_Hero"
-                    matches = card_vision.find(hand_view, card_name, threshold=0.700)
-                
+
                 for ((x, y, w, h), score) in matches:
                     real_y = y + roi_top
                     raw_hand.append((card_name, (x, real_y, w, h), score))   
@@ -512,27 +505,36 @@ if __name__ == "__main__":
             arena_detector.draw_detections(frame, arena_results)
 
             # --- BOT LOGIC ---
-            if len(arena_results) > 0 and not bot_state["is_acting"]: 
-                # Extract boxes
-                detections = arena_results[0].boxes
+            if not bot_state["is_acting"]: 
+                
+                # Safely extract boxes if they exist, otherwise pass an empty list
+                detections = arena_results[0].boxes if len(arena_results) > 0 else []
                 
                 # Ask the brain to make a move
                 move = bot_logic.get_best_move(detections, current_hand, current_elixir, names_map)
 
                 if move:
-                    target_name, (target_x, target_y), enemy = move
+                    target_name, (target_x, target_y), enemy_data = move
                     
-                    # Convert pixels to tiles
+                    # Convert pixels back to tiles for the action clicker
                     tile_x, tile_y = mapper.pixel_to_tile(target_x, target_y)
 
                     # Find which slot contains the card
                     slot_num = get_slot_from_name(target_name, current_hand, screen_config)
 
                     if slot_num:
-                        print(f"Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) to counter {enemy['Troop']} ({enemy['x']},{enemy['y']})).")
+                        action_reason = enemy_data['Troop']
+                        
+                        # Clean up the console logs based on Offense vs Defense
+                        if action_reason in ["Offensive Push", "Cycle Tank in Back"]:
+                            print(f"🔥 ATTACKING: Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) -> {action_reason}")
+                        else:
+                            enemy_x, enemy_y = mapper.pixel_to_tile(enemy_data['x'], enemy_data['y'])
+                            print(f"🛡️ DEFENDING: Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) to counter {action_reason} at ({enemy_x:.1f}, {enemy_y:.1f}).")
+                        
                         threading.Thread(target=action_thread, args=(slot_num, (tile_x, tile_y))).start()
                     else:
-                        print(f"LOGIC ERROR: Wanted to play {target_name}, but couldn't find the slot.")
+                        print(f"LOGIC ERROR: Brain wanted to play {target_name}, but couldn't find the slot in hand.")
 
             # # --- SCORE ---
             # if frame_count % 30 == 0 and not score_input_queue.full():

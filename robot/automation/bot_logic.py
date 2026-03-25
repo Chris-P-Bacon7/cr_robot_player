@@ -1,5 +1,6 @@
 import os
 import sys
+import random as rand
 
 # Tell Python to look one folder up for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -12,6 +13,7 @@ class BotLogic:
         self.arena_height = arena_height
         self.arena_width = arena_width
         self.crossed_bridge = arena_height * 0.45
+        self.speed_multiplier = 0.02
 
         self.json_name = "card_database.json"
         self.json_location = f"robot\\{self.json_name}"
@@ -20,7 +22,7 @@ class BotLogic:
         self.data = self.load_json(self.json_location, self.json_name)
         self.counter_chart = self.config_json(self.data, "counters", cur_deck)
         self.card_info = self.config_json(self.data, "cards", cur_deck)
-        self.screen_mapper = ScreenMapper(self.load_config("robot\\Chris_S25.json", "Chris_S25.json"), 18, 30)
+        self.screen_mapper = ScreenMapper(self.load_config("robot\\Chris_S25.json", "Chris_S25.json"), 30, 18)
 
     def load_config(self, json_location, json_name):
         if not os.path.exists(json_location):
@@ -78,7 +80,114 @@ class BotLogic:
             chart = data[f"{config_type}"]
             return chart
         
+    def analyze_threats(self, detections, names_map):
+        threats = []
+        for box in detections:
+            x1, y1, x2, y2 = box.xyxy[0]
+            conf = float(box.conf[0])
+            cls_id = int(box.cls[0])
+
+            if cls_id not in names_map: continue
+            raw_name = names_map[cls_id]
+            if "-" not in raw_name: continue
+
+            team, troop = raw_name.split("-", 1)
+            cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
+            tile_x, tile_y = self.screen_mapper.pixel_to_tile(cx, cy)
+
+            if team == "Enemy" and troop not in ("PrincessTower", "KingTower"):
+                if tile_y > self.crossed_bridge:
+                    threats.append({"Troop": troop, "x": cx, "y": cy, 
+                                    "tile_x": tile_x, "tile_y": tile_y, "conf": conf})
+            
+            threats.sort(key=lambda t: t["tile_y"], reverse=True)
+        return threats
     
+    def get_defensive_move(self, threats, available_cards, current_elixir):
+        most_dangerous = threats[0]
+        enemy_name = most_dangerous["Troop"]
+
+        if enemy_name not in self.counter_chart:
+            print(f"LOGIC WARNING: No defined counter for {enemy_name}.")
+            return None
+        
+        primary_counters = []
+        primary_counters.extend(self.counter_chart[enemy_name].get("primary", []))
+        primary_counters.extend(self.counter_chart[enemy_name].get("spell", []))
+        primary_counters.extend(self.counter_chart[enemy_name].get("secondary", []))
+
+        for card_name in primary_counters:
+            if card_name in available_cards:
+                cost = self.card_info[card_name]["elixir"]
+                card_class = self.card_info[card_name].get("class", "troop")
+
+                # Check if enemy is an air troop
+                enemy_data_full = self.data["cards"].get(enemy_name, {})
+
+                latency_compensation = 0.75
+                if current_elixir >= cost:
+                    enemy_x, enemy_y = most_dangerous["tile_x"], most_dangerous["tile_y"]
+
+                    if "ability" in enemy_data_full and "air" in enemy_data_full["ability"]:
+                        enemy_y += 2.0
+
+                    if "spell" in card_class.lower():
+                        raw_speed_unit = self.card_info[card_name].get("speed", 800)
+                        tiles_per_sec = raw_speed_unit * 0.02
+                        king_x, king_y = 9.0, 28.0
+
+                        distance = ((enemy_x - king_x) **2 + (enemy_y - king_y) ** 2) ** 0.5
+                        flight_time = distance / tiles_per_sec
+
+                        total_spell_latency = 1 + flight_time
+
+                        play_x = enemy_x
+                        play_y = enemy_y + total_spell_latency
+                    else:
+                        offset = self.card_info[card_name]["placement_offset"]
+
+                        if enemy_x >= 9: play_x = enemy_x - (0.5 * offset ** 2) ** 0.5
+                        else: play_x = enemy_x + (0.5 * offset ** 2) ** 0.5
+
+                        play_y = enemy_y + (0.5 * offset ** 2) ** 0.5 + latency_compensation
+                        
+                    play_x = max(0, min(play_x, self.arena_width))
+                    play_y = max(0, min(play_y, self.arena_height))
+
+                    pixel_x, pixel_y = self.screen_mapper.tile_to_pixel(play_x, play_y)
+                    return (card_name, (pixel_x, pixel_y), most_dangerous)
+        return None
+    
+    def get_offensive_move(self, available_cards, current_elixir):
+        """ 
+        IMPROVEMENTS NEEDED:
+        Check to make sure that the arena conditions are favourable
+        before initiating an offensive decision 
+        """
+        if current_elixir < 9:
+            return None
+        
+        for card_name in available_cards:
+            card_class = self.card_info[card_name].get("class", "").lower()
+            cost = self.card_info[card_name]["elixir"]
+
+            if card_class == "wincon" and current_elixir >= cost:
+                lane_x = rand.choice([3, 15])
+                pixel_x, pixel_y = self.screen_mapper.tile_to_pixel(lane_x, 14)
+
+                fake_enemy_data = {"Troop": "Offensive Push", "x": pixel_x, "y": pixel_y}
+                return (card_name, (pixel_x, pixel_y), fake_enemy_data)
+        
+        for card_name in available_cards:
+            card_class = self.card_info[card_name].get("class", "").lower()
+            if card_class != "tank" and "spell" not in card_class:
+                lane_x = 9
+                pixel_x, pixel_y = self.screen_mapper.tile_to_pixel(lane_x, 28)
+                
+                return (card_name, (pixel_x, pixel_y), {"Troop": "Cycle Tank in Back", "x": pixel_x, "y": pixel_y})
+
+        return None
+
     def get_best_move(self, detections, current_hand, current_elixir, names_map):
         """
         Main brain function.
@@ -88,103 +197,17 @@ class BotLogic:
             current_hand: List of card names currently available
             current_elixir: Integer
         """
-
-        # 1. Find threats
-        threats = []
-
-        for box in detections:
-            # Obtain all 6 data points from boxes in YOLOv8
-            x1, y1, x2, y2 = box.xyxy[0]
-            confidence = float(box.conf[0])
-            cls_id = int(box.cls[0])
-
-            if cls_id in names_map:
-                raw_name = names_map[cls_id]
-            else:
-                continue
-
-            # The classes are named [Team]-[TroopName]-[States]
-            # We will split this into 3+ data points
-
-            if "-" in raw_name:
-                parts = raw_name.split("-")
-                team = parts[0]
-                troop = parts[1]
-
-            # Calculate the centre of the enemy
-            cx = int((x1 + x2) / 2)
-            cy = int((y1 + y2) / 2)
-
-            tile_x, tile_y = self.screen_mapper.pixel_to_tile(cx, cy)
-
-            if team == "Enemy" and troop not in ("PrincessTower", "KingTower"):
-                if tile_y > self.crossed_bridge:
-                    threats.append({
-                        "Troop": troop,
-                        "x": cx,
-                        "y": cy,
-                        "conf": confidence
-                    })
-            
-        # Sort threats based on distance from bottom
-        threats.sort(key=lambda t: t["y"], reverse=True)
-
-        if len(threats) == 0:
-            return None # No threats = Do nothing
-        
-        most_dangerous = threats[0]
-        enemy_name = most_dangerous["Troop"]
-
-        # 2. Decide counter
-        if enemy_name not in self.counter_chart: # Make sure we have a counter
-            print(f"LOGIC WARNING: No defined counter for {enemy_name}.")
-            return None
-
-        card_counters = []
-        spell_counters = []
-
-        for card in self.counter_chart[enemy_name]["primary"]:
-            card_counters.append(card)
-        for card in self.counter_chart[enemy_name]["secondary"]:
-            card_counters.append(card)
-        for card in self.counter_chart[enemy_name]["spell"]:
-            spell_counters.append(card)
-        
         available_cards = [card[0] for card in current_hand]
-        elixir_stat = {}
 
-        for card in self.data["cards"]:
-            elixir_stat[f"{card}"] = self.data["cards"][f"{card}"]["elixir"]
+        threats = self.analyze_threats(detections, names_map)
+
+        if threats and threats[0]["tile_y"] <= 20:
+            move = self.get_defensive_move(threats, available_cards, current_elixir)
+            if move: return move
+        elif not threats or threats[0]["tile_y"] > 20:
+            move = self.get_offensive_move(available_cards, current_elixir)
+            if move: return move
         
-        for card_name in card_counters:
-            if card_name in available_cards:
-                cost = elixir_stat[card_name]
-                enemy_x = most_dangerous["x"]
-                enemy_y = most_dangerous["y"]
-
-                if current_elixir >= cost:
-                    offset = self.card_info[card_name]["placement_offset"]
-                    play_x, play_y = self.screen_mapper.pixel_to_tile(enemy_x, enemy_y)
-                    
-                    if play_x >= 9:
-                        play_x -= (0.5 * offset ** 2) ** 0.5
-                    else:
-                        play_x += (0.5 * offset ** 2) ** 0.5
-                    if play_x < 0:
-                        play_x = 0
-                    elif play_x > self.arena_width:
-                        play_x = self.arena_width
-                    
-                    play_y -= (0.5 * offset ** 2) ** 0.5
-                    if play_y < 0:
-                        play_y = 0
-                    elif play_y > self.arena_height:
-                        play_y = self.arena_height
-                    
-                    play_x, play_y = self.screen_mapper.tile_to_pixel(play_x, play_y)
-                    
-                    return (card_name, (play_x, play_y), most_dangerous)
-    
         return None
     
 

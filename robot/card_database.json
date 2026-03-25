@@ -13,6 +13,7 @@
             "class": "tank", 
             "elixir": 7,
             "range": 1.2,
+            "hit_speed": 1.8,
             "speed": 1,
             "placement_offset": 0.5,
             "health": {
@@ -28,6 +29,7 @@
             "class": "assassin",
             "elixir": 3,
             "range": 0.8,
+            "hit_speed": 1,
             "speed": 3,
             "placement_offset": 4.5,
             "health": {
@@ -38,7 +40,7 @@
             },
             "ability": {
                 "type": "charge",
-                "charge_range": ["distance", 3.5, 6.0],
+                "charge": {"distance": [3.5, 6.0]},
                 "invulnerable": true,
                 "damage": {
                     "9": 319, "10": 351, "11": 386, "12": 425, "13": 467, "14": 514, "15": 565
@@ -49,6 +51,7 @@
             "class": "minitank",
             "elixir": 3,
             "range": 1.2,
+            "hit_speed": 1.8,
             "speed": 3,
             "placement_offset": 3.0,
             "health": {
@@ -67,6 +70,7 @@
             "class": "glasscannon",
             "elixir": 4,
             "range": 7.0,
+            "hit_speed": 1.1,
             "speed": 2,
             "placement_offset": 6.0,
             "health": {
@@ -83,6 +87,7 @@
             "class": "glasscannon",
             "elixir": 4,
             "range": 5.0,
+            "hit_speed": 1.8,
             "speed": 3,
             "placement_offset": 3.0,
             "health": {
@@ -95,8 +100,10 @@
                 "type": "stun",
                 "stun_duration": 0.5,
                 "targets": 2,
-                "spawn_damage": {
+                "spawn": {
+                    "spawn_damage": {
                     "9": 159, "10": 175, "11": 192, "12": 211, "13": 232, "14": 255, "15": 281
+                    }
                 }
             }
         },
@@ -113,15 +120,17 @@
                 "9": 236, "10": 260, "11": 286, "12": 315, "13": 347, "14": 382, "15": 420
             },
             "ability": {
-                "type": ["charge", "spawn_on_death"],
-                "charge_damage_multiplier": 2.0,
-                "spawn_on_death": ["Barbarians", 2]
+                "type": ["charge", "death_spawn"],
+                "charge": {"damage": 2.0},
+                "spawn": {"death": ["Barbarians", 2]
+                }
             }
         },
         "GoldenKnight": {
             "class": "minitank",
             "elixir": 4,
             "range": 1.2,
+            "hit_speed": 0.9,
             "speed": 2,
             "placement_offset": 3.0,
             "health": {
@@ -132,6 +141,7 @@
             },
             "ability": {
                 "type": "charge",
+                "charge": {"distance": [0, 5.5]},
                 "elixir": 1,
                 "max_targets": 10,
                 "damage": {
@@ -143,6 +153,7 @@
             "class": "medspell",
             "elixir": 4,
             "range": 100,
+            "speed": 600,
             "placement_offset": 0.0,
             "damage": {
                 "9": 569, "10": 626, "11": 689, "12": 758, "13": 834, "14": 917, "15": 1009
@@ -158,6 +169,7 @@
             "class": "smallspell",
             "elixir": 2,
             "range": 100,
+            "speed": 1600,
             "placement_offset": 0.0,
             "damage": {
                 "9": 159, "10": 175, "11": 192, "12": 211, "13": 232, "14": 255, "15": 281
@@ -175,6 +187,7 @@
             "class": "medspell",
             "elixir": 4,
             "range": 100,
+            "speed": 1600,
             "placement_offset": 3.5,
             "damage": {
                 "6": 57, "7": 63, "8": 69, "9": 76, "10": 83,
@@ -189,7 +202,151 @@
                 "dot": [1, 8],
                 "splash": ["radius", 3.5]
             }
+        },
+        "Giant": {
+            "class": "tank",
+            "elixir": 5,
+            "range": 1.2,
+            "hit_speed": 1.5,
+            "speed": 1,
+            "placement_offset": 5.0,
+            "health": {
+                "6": 2556, "7": 2812, "8": 3084, "9": 3387, "10": 3723,
+                "11": 4090, "12": 4490, "13": 4937, "14": 5417, "15": 5944
+            },
+            "damage": {
+                "6": 158, "7": 174, "8": 191, "9": 209, "10": 230,
+                "11": 253, "12": 278, "13": 305, "14": 335, "15": 368
+            }
+        },
+        "NightWitch": {
+            "class": "minitank",
+            "elixir": 4,
+            "range": 1.6,
+            "hit_speed": 1.3,
+            "speed": 2,
+            "placement_offset": 4.0,
+            "health": {
+                "9": 750, "10": 824, "11": 906, "12": 994, "13": 1093, "14": 1200, "15": 1316
+            },
+            "damage": {
+                "9": 260, "10": 286, "11": 314, "12": 345, "13": 380, "14": 416, "15": 457
+            },
+            "ability": {
+                "type": "spawner",
+                "spawn": {
+                    "active": ["Bats", 2, 5],
+                    "death": ["Bats", 4]
+                }
+            }
+        },
+        "Bats": {
+            "class": "mini",
+            "elixir": 2,
+            "range": 1.2,
+            "hit_speed": 1.3,
+            "speed": 4,
+            "placement_offset": 2.0,
+            "health": {
+                "9": 67, "10": 74, "11": 81, "12": 89, "13": 98, "14": 108, "15": 119
+            },
+            "damage": {
+                "9": 67, "10": 74, "11": 81, "12": 89, "13": 98, "14": 108, "15": 119
+            },
+            "ability": {
+                "type": "swarm",
+                "count": 5,
+                "air": true
+            }
+        },
+        "Balloon": {
+            "class": "wincon",
+            "elixir": 5,
+            "range": 0.1,
+            "hit_speed": 2.0,
+            "speed": 2,
+            "placement_offset": 5.0,
+            "health": {
+                "6": 1049, "7": 1154, "8": 1266, "9": 1390, "10": 1528,
+                "11": 1679, "12": 1843, "13": 2027, "14": 2223, "15": 2440
+            },
+            "damage": {
+                "6": 400, "7": 440, "8": 482, "9": 530, "10": 582,
+                "11": 640, "12": 702, "13": 772, "14": 847, "15": 930
+            },
+            "ability": {
+                "air": true,
+                "spawn_on_death": ["radius", 3],
+                "death_damage": {
+                    "6": 150, "7": 165, "8": 181, "9": 199, "10": 219,
+                    "11": 240, "12": 264, "13": 290, "14": 318, "15": 349
+                }
+            }
+        },
+        "Arrows": {
+            "class": "medspell",
+            "elixir": 3,
+            "range": 100,
+            "speed": "fast",
+            "placement_offset": 0.0,
+            "damage": {
+                "6": 228, "7": 252, "8": 276, "9": 303, "10": 333,
+                "11": 366, "12": 402, "13": 444, "14": 486, "15": 534
+            },
+            "crown_tower_damage": {
+                "6": 57, "7": 63, "8": 69, "9": 78, "10": 84,
+                "11": 93, "12": 102, "13": 111, "14": 123, "15": 135
+            },
+            "ability": {
+                "splash": ["radius", 3.5]
+            }
+        },
+        "DarkPrince": {
+            "class": "minitank",
+            "elixir": 4,
+            "range": 1.2,
+            "hit_speed": 1.3,
+            "speed": 2,
+            "placement_offset": 4.0,
+            "health": {
+                "6": 750, "7": 825, "8": 905, "9": 994, "10": 1092,
+                "11": 1200, "12": 1317, "13": 1449, "14": 1589, "15": 1744
+            },
+            "damage": {
+                "6": 166, "7": 183, "8": 201, "9": 221, "10": 243,
+                "11": 266, "12": 293, "13": 321, "14": 352, "15": 387
+            },
+            "ability": {
+                "type": ["charge", "shield"],
+                "charge": {"damage": 2.0},
+                "splash": ["radius", 1.1],
+                "shield_health": {
+                    "6": 150, "7": 165, "8": 181, "9": 199, "10": 219,
+                    "11": 240, "12": 264, "13": 290, "14": 318, "15": 349
+                }
+            }
+        },
+        "Firecracker": {
+            "class": "glasscannon",
+            "elixir": 3,
+            "range": 6.0,
+            "hit_speed": 3.0,
+            "speed": 3,
+            "placement_offset": 6.0,
+            "health": {
+                "6": 190, "7": 209, "8": 229, "9": 252, "10": 277,
+                "11": 304, "12": 334, "13": 367, "14": 403, "15": 442
+            },
+            "damage": {
+                "6": 40, "7": 44, "8": 48, "9": 53, "10": 58,
+                "11": 64, "12": 70, "13": 77, "14": 84, "15": 93
+            },
+            "ability": {
+                "type": "recoil",
+                "splash": ["pierce", 5]
+            }
         }
+
     },
     "counters": {
         "Giant": {
