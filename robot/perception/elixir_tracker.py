@@ -28,7 +28,7 @@ class ElixirTracker:
         # 2. Calculate Geometry
         # Width is Right - Left
         bar_width = right_x - left_x 
-        middle_y = int((top_y + bottom_y) / 2)
+        middle_y = int((top_y + bottom_y) * 0.5)
         
         # Distance between bubbles (9 gaps for 10 bubbles)
         dx = bar_width / 9
@@ -95,14 +95,9 @@ class ElixirTracker:
                     if self.is_blue(sub_pixel):
                         fraction += 0.1
 
-                return round(current_elixir + fraction, 2)
-        
-        # Inside elixir_tracker.py -> get_elixir
-        for i, pt in self.points.items():
-            cv2.circle(frame, pt, 3, (0, 255, 0), -1) # Draw a green dot at every check-point
-        cv2.imshow("Elixir Debug", frame, )
+                return round(current_elixir + fraction, 3)
 
-        return float(round(current_elixir, 2))
+        return float(round(current_elixir, 3))
     
     def is_purple(self, pixel):
         """
@@ -117,13 +112,29 @@ class ElixirTracker:
                 # Allows the colour to be super bright (glow) or purple
                 # as long as it's not too bright or gray
                 return True
+            
+        # Ensures that if the elixir bar is full but glowing, it is still valid
+        if r > 220 and g > 220 and b > 220:
+            return True
         
         return False
     
     def is_blue(self, pixel):
-        b, g, r = (int(pixel[0]), int(pixel[1]), int(pixel[2]))
+        """
+        Detects the empty blue background of the elixir bar.
+        Target RGB: (51, 80, 160) -> Target OpenCV BGR: [160, 80, 51]
+        """
+        # Remember: OpenCV pixels are [Blue, Green, Red]
+        b, g, r = int(pixel[0]), int(pixel[1]), int(pixel[2])
 
-        if b > g and g > r and 60 < b < 150 and 45 < g < 110 and 20 < r < 80:
-            return True
-        
+        # 1. The Tolerance Window
+        # We allow a +/- 30 margin around your target numbers to account for video blur
+        if 130 < b < 190 and 50 < g < 110 and 20 < r < 80:
+            
+            # 2. The Ratio Check
+            # Even if the numbers shift, it must maintain the core color profile: 
+            # Blue is the strongest, Green is in the middle, Red is the weakest.
+            if b > g and g > r:
+                return True
+                
         return False

@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import cv2
 
 class ArenaVision:
-    def __init__(self, model_path="runs\\detect\\train2\\weights\\best.pt"):
+    def __init__(self, model_path="runs\\detect\\train7\\weights\\best.pt"):
         print(f"Loading YOLO model from {model_path}...")
 
         try:

@@ -14,9 +14,9 @@ from automation.game_controller import GameController
 from perception.card_vision import CardVision
 from perception.elixir_tracker import ElixirTracker
 from perception.arena_vision import ArenaVision
-from automation.play_automation import PlayAutomation
+from automation.placement_optimization import PlayAutomation
 from perception.screen_mapper import ScreenMapper
-from automation.score import Score
+from automation.game_state import GameState
 
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -122,7 +122,7 @@ def arena_ai_thread(detector, input_queue, output_queue):
                 except queue.Empty:
                     pass
 
-            results = list(detector.find_troops(frame))
+            results = list(detector.find_troops(frame, 0.700))
 
             if not output_queue.empty():
                 try: output_queue.get_nowait()
@@ -161,7 +161,7 @@ def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
         except Exception as e:
             print(f"Card Thread Error: {e}")
 
-def socre_vision_thread(score_tracker, input_queue, output_queue):
+def score_vision_thread(score_tracker, input_queue, output_queue):
     while True:
         try:
             frame = input_queue.get(timeout=0.1)
@@ -170,7 +170,8 @@ def socre_vision_thread(score_tracker, input_queue, output_queue):
                 try: frame = input_queue.get_nowait()
                 except queue.Empty: pass
             
-            health_data = score_tracker.tower_state(frame)
+            tower_state = score_tracker.tower_state(frame)
+            health_data = tower_state[0]
 
             if not output_queue.empty():
                 try: output_queue.get_nowait()
@@ -304,7 +305,7 @@ if __name__ == "__main__":
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
     bot_logic = PlayAutomation(decks[user])
-    score_tracker = Score(json_name, json_location)
+    score_tracker = GameState(json_name, json_location)
 
     arena_detector = ArenaVision("runs\\detect\\train7\\weights\\best.onnx")
     names_map = arena_detector.model.names
@@ -336,7 +337,7 @@ if __name__ == "__main__":
     print("Card Vision Thread Started.")
 
     score_thread = threading.Thread(
-        target=socre_vision_thread,
+        target=score_vision_thread,
         args=(score_tracker, score_input_queue, score_output_queue),
         daemon=True
     )
@@ -439,6 +440,7 @@ if __name__ == "__main__":
             # --- BOT VISION WINDOW ---
             try:
                 frame = cap.get_screenshot()
+                clean_frame = frame.copy()
             except Exception as e:
                 print(f"ERROR: Your Window: \"{window_name}\" is not open. Trying again.\n")
 
@@ -485,7 +487,7 @@ if __name__ == "__main__":
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             # --- ELIXIR TRACKING ---
-            if frame_count % 10 == 0 or frame_count == 1:
+            if frame_count % 5 == 0 or frame_count == 1:
                 current_elixir = elixir_tracker.get_elixir(frame)
 
             # --- ARENA DETECTION ---
@@ -503,6 +505,34 @@ if __name__ == "__main__":
             # Draw the arena results to keep the boxes on the screen
             arena_detector.draw_detections(frame, arena_results)
 
+            # --- SCORE ---
+            if frame_count % 30 == 0 and not score_input_queue.full():
+                score_input_queue.put(clean_frame)
+            
+            try:
+                new_scores = score_output_queue.get_nowait()
+                current_scores = new_scores
+            except queue.Empty:
+                pass
+            
+            # Evaluation Window
+            eval_frame = np.full((400, 300, 3), 30, dtype=np.uint8)
+            cv2.putText(eval_frame, "EVALUATION", (40, 30), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            
+            y_offset = 80
+            for tower_name, hp in current_scores.items():
+                display_name = tower_name.replace("_health", "").replace("_", " ").title()
+                hp_text = str(hp) if hp is not None else "???"
+                colour = (100, 100, 255) if "Enemy" in display_name else (255, 150, 50)
+
+                cv2.putText(eval_frame, f"{display_name}: {hp_text}", (20, y_offset), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, colour, 2)
+                
+                y_offset += 40
+            
+            cv2.imshow("Match Evaluation", eval_frame)
+            
             # --- BOT LOGIC ---
             if not bot_state["is_acting"]: 
                 
@@ -538,34 +568,7 @@ if __name__ == "__main__":
                     else:
                         print(f"LOGIC ERROR: Brain wanted to play {target_name}, but couldn't find the slot in hand.")
 
-            # # --- SCORE ---
-            # if frame_count % 30 == 0 and not score_input_queue.full():
-            #     score_input_queue.put(frame.copy())
-            
-            # try:
-            #     new_scores = score_output_queue.get_nowait()
-            #     current_scores = new_scores
-            # except queue.Empty:
-            #     pass
-            
-            # # Evaluation Window
-            # eval_frame = np.full((400, 300, 3), 30, dtype=np.uint8)
-            # cv2.putText(eval_frame, "EVALUATION", (40, 30), 
-            #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-            
-            # y_offset = 80
-            # for tower_name, hp in current_scores.items():
-            #     display_name = tower_name.replace("_health", "").replace("_", " ").title()
-            #     hp_text = str(hp) if hp is not None else "???"
-            #     colour = (100, 100, 255) if "Enemy" in display_name else (255, 150, 50)
 
-            #     cv2.putText(eval_frame, f"{display_name}: {hp_text}", (20, y_offset), 
-            #                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, colour, 2)
-                
-            #     y_offset += 40
-            
-            # cv2.imshow("Match Evaluation", eval_frame)
-            
 
             # --- DRAWING ON BOT VISION ---
             

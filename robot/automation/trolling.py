@@ -4,7 +4,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from automation.score import Score
+from automation.game_state import GameState
 from automation.game_controller import GameController
 
 class Trolling:

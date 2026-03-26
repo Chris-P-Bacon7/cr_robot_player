@@ -7,15 +7,6 @@ import numpy as np
 import time
 from perception.window_capture import WindowCapture
 
-"""
-((77, 633), (131, 653))
-((379, 635), (425, 652))
-((77, 140), (128, 160))
-((375, 142), (426, 161))
-
-((224, 755), (292, 784))
-((224, 3), (294, 30))
-"""
 
 class WindowCoordinateGatherer:
     def __init__(self, window_name="SM-S936W"):

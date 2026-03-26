@@ -250,7 +250,7 @@ class PlayAutomation:
         primary_counters.extend(self.counter_chart[enemy_name].get("spell", []))
         primary_counters.extend(self.counter_chart[enemy_name].get("secondary", []))
 
-        if most_dangerous.get("threat_score", 0) < 3.0:
+        if most_dangerous.get("threat_score", 0) < 4.0:
             return None
 
         for card_name in primary_counters:
@@ -258,7 +258,7 @@ class PlayAutomation:
                 cost = self.card_info[card_name]["elixir"]
                 
                 if current_elixir >= cost:
-                    self.calculate_optimal_placement(card_name, most_dangerous)
+                    return self.calculate_optimal_placement(card_name, most_dangerous)
         return None
     
     def get_idle_move(self, available_cards, current_elixir, evaluation):
@@ -280,6 +280,13 @@ class PlayAutomation:
                 # 1. Iniitialize danger scores for both lanes
                 left_danger = 0
                 right_danger = 0
+                for threat in evaluation:
+                    danger_weight = threat.get("threat_score", 0)
+                    
+                    if threat["tile_x"] < 9.5:
+                        left_danger += danger_weight
+                    else:
+                        right_danger += danger_weight
 
                 # Make decision of which lane to be offensive in. Avoid lane with existing troops
                 if left_danger > 10 or right_danger > 10:
@@ -291,15 +298,7 @@ class PlayAutomation:
                 else:
                     lane_x = rand.choice([2, 16])
         
-                if card_class == "wincon" and current_elixir >= cost and evaluation:
-                    for threat in evaluation:
-                        danger_weight = threat.get("threat_score", 0)
-                        
-                        if threat["tile_x"] < 9.5:
-                            left_danger += danger_weight
-                        else:
-                            right_danger += danger_weight
-
+                if card_class == "wincon" and current_elixir >= cost:
                     pixel_x, pixel_y = self.screen_mapper.tile_to_pixel(lane_x, 14)
 
                     fake_enemy_data = {"Troop": "Offensive Push", "x": pixel_x, "y": pixel_y}
