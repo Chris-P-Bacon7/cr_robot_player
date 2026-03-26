@@ -1,3 +1,5 @@
+import cv2
+
 class ElixirTracker:
     def __init__(self, config):
         self.config = config
@@ -46,7 +48,11 @@ class ElixirTracker:
         Returns the highest point that is purple.
         """
         current_elixir = 0
-        h, w = frame.shape[:2]
+        
+        try:
+            h, w = frame.shape[:2]
+        except AttributeError:
+            return None
 
         # Loop through our pre-calculated points
         for i in range(1, 11):
@@ -67,10 +73,36 @@ class ElixirTracker:
             if self.is_purple(pixel):
                 current_elixir = i
             else:
-                # Optimization: If bubble 5 is empty, 6-10 are definitely empty.
-                break
+                if i == 1:
+                    gap = self.points[2][0] - self.points[1][0]
+                    prev_x = self.points[1][0] - gap
+                else:
+                    prev_x = self.points[i - 1][0]
+                
+                cur_x = self.points[i][0]
+                dx = (cur_x - prev_x) / 10.0
 
-        return current_elixir
+                fraction = 0.0
+
+                for j in range(1, 10):
+                    sub_x = int(prev_x + (dx * j))
+
+                    if sub_x >= w:
+                        continue
+                    
+                    sub_pixel = frame[py, sub_x]
+
+                    if self.is_blue(sub_pixel):
+                        fraction += 0.1
+
+                return round(current_elixir + fraction, 2)
+        
+        # Inside elixir_tracker.py -> get_elixir
+        for i, pt in self.points.items():
+            cv2.circle(frame, pt, 3, (0, 255, 0), -1) # Draw a green dot at every check-point
+        cv2.imshow("Elixir Debug", frame, )
+
+        return float(round(current_elixir, 2))
     
     def is_purple(self, pixel):
         """
@@ -80,10 +112,18 @@ class ElixirTracker:
         b, g, r = (int(pixel[0]), int(pixel[1]), int(pixel[2]))
 
         # Target Color (Pink/Purple)
-        if r > 120 and b > 120: # Ensures that the colour is bright enough
-            if g < 200 and r > (g + 25) and b > (g + 25):
+        if r > 90 and b > 90: # Ensures that the colour is bright enough
+            if r > (g + 15) and b > (g + 15):
                 # Allows the colour to be super bright (glow) or purple
                 # as long as it's not too bright or gray
                 return True
+        
+        return False
+    
+    def is_blue(self, pixel):
+        b, g, r = (int(pixel[0]), int(pixel[1]), int(pixel[2]))
+
+        if b > g and g > r and 60 < b < 150 and 45 < g < 110 and 20 < r < 80:
+            return True
         
         return False

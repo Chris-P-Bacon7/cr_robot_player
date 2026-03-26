@@ -14,7 +14,7 @@ from automation.game_controller import GameController
 from perception.card_vision import CardVision
 from perception.elixir_tracker import ElixirTracker
 from perception.arena_vision import ArenaVision
-from automation.bot_logic import BotLogic
+from automation.play_automation import PlayAutomation
 from perception.screen_mapper import ScreenMapper
 from automation.score import Score
 
@@ -140,7 +140,7 @@ def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
         try:
             frame = input_queue.get(timeout=0.1)
             h_frame, w_frame = frame.shape[:2]
-            roi_top = int(h_frame * 0.86)
+            roi_top = int(h_frame * 0.85)
             hand_view = frame[roi_top:h_frame, 0:w_frame]
 
             raw_hand = []
@@ -150,7 +150,6 @@ def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
                 for ((x, y, w, h), score) in matches:
                     real_y = y + roi_top
                     raw_hand.append((card_name, (x, real_y, w, h), score))   
-                
             
             if not output_queue.empty():
                 try: output_queue.get_nowait()
@@ -304,7 +303,7 @@ if __name__ == "__main__":
     bot_controls = GameController(cap)
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
-    bot_logic = BotLogic(decks[user])
+    bot_logic = PlayAutomation(decks[user])
     score_tracker = Score(json_name, json_location)
 
     arena_detector = ArenaVision("runs\\detect\\train7\\weights\\best.onnx")
@@ -526,12 +525,15 @@ if __name__ == "__main__":
                         action_reason = enemy_data['Troop']
                         
                         # Clean up the console logs based on Offense vs Defense
-                        if action_reason in ["Offensive Push", "Cycle Tank in Back"]:
-                            print(f"🔥 ATTACKING: Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) -> {action_reason}")
+                        if "Offensive Push" in action_reason or "Cycle" in action_reason:
+                            print(f"🕐 IDLE MOVE: Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) -> {action_reason}")
                         else:
                             enemy_x, enemy_y = mapper.pixel_to_tile(enemy_data['x'], enemy_data['y'])
-                            print(f"🛡️ DEFENDING: Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) to counter {action_reason} at ({enemy_x:.1f}, {enemy_y:.1f}).")
+                            print(f"🛡️ DEFENDING: Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) "
+                                  f"to counter {action_reason} at ({enemy_x:.1f}, {enemy_y:.1f}) "
+                                    f"→ Evaluation (Threat Score: {move[2]['threat_score']:.1f}, ETA: {move[2]['eta']:.1f}).")
                         
+                        bot_logic.commit_play(target_name, tile_x, tile_y)
                         threading.Thread(target=action_thread, args=(slot_num, (tile_x, tile_y))).start()
                     else:
                         print(f"LOGIC ERROR: Brain wanted to play {target_name}, but couldn't find the slot in hand.")

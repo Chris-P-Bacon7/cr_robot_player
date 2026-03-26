@@ -6,7 +6,7 @@ import json
 import os
 
 class WindowCapture:
-    def __init__(self, window_title_keyword, json_file):
+    def __init__(self, window_title_keyword, json_file="bot_config.json"):
         self.window_title = window_title_keyword
         self.json_save = json_file
         self.monitor = None

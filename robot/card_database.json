@@ -14,8 +14,10 @@
             "elixir": 7,
             "range": 1.2,
             "hit_speed": 1.8,
-            "speed": 1,
-            "placement_offset": 0.5,
+            "speed": 45,
+            "placement": {
+                "offset": 0.5
+            },
             "health": {
                 "6": 2350, "7": 2585, "8": 2835, "9": 3114, "10": 3422,
                 "11": 3760, "12": 4127, "13": 4539, "14": 4979, "15": 5464
@@ -30,8 +32,10 @@
             "elixir": 3,
             "range": 0.8,
             "hit_speed": 1,
-            "speed": 3,
-            "placement_offset": 4.5,
+            "speed": 90,
+            "placement": {
+                "offset": 4.5
+            },
             "health": {
                 "9": 750, "10": 825, "11": 907, "12": 998, "13": 1098, "14": 1208, "15": 1329
             },
@@ -52,8 +56,10 @@
             "elixir": 3,
             "range": 1.2,
             "hit_speed": 1.8,
-            "speed": 3,
-            "placement_offset": 3.0,
+            "speed": 90,
+            "placement": {
+                "offset": 3.0
+            },
             "health": {
                 "9": 1000, "10": 1100, "11": 1210, "12": 1331, "13": 1464, "14": 1610, "15": 1771
             },
@@ -71,8 +77,10 @@
             "elixir": 4,
             "range": 7.0,
             "hit_speed": 1.1,
-            "speed": 2,
-            "placement_offset": 6.0,
+            "speed": 60,
+            "placement": {
+                "offset": 7.0
+            },
             "health": {
                 "9": 440, "10": 484, "11": 532, "12": 585, "13": 644, "14": 708, "15": 779
             },
@@ -88,8 +96,10 @@
             "elixir": 4,
             "range": 5.0,
             "hit_speed": 1.8,
-            "speed": 3,
-            "placement_offset": 3.0,
+            "speed": 90,
+            "placement": {
+                "offset": 5
+            },
             "health": {
                 "9": 589, "10": 648, "11": 713, "12": 784, "13": 862, "14": 948, "15": 1043
             },
@@ -111,8 +121,11 @@
             "class": "wincon",
             "elixir": 4,
             "range": 0.5,
-            "speed": 2,
-            "placement_offset": 4.0,
+            "speed": 60,
+            "placement": {
+                "offset": 4.0,
+                "kite": [9, 10]
+            },
             "health": {
                 "9": 770, "10": 847, "11": 932, "12": 1025, "13": 1128, "14": 1241, "15": 1365
             },
@@ -120,8 +133,8 @@
                 "9": 236, "10": 260, "11": 286, "12": 315, "13": 347, "14": 382, "15": 420
             },
             "ability": {
-                "type": ["charge", "death_spawn"],
-                "charge": {"damage": 2.0},
+                "type": ["charge", "spawner"],
+                "charge": {"damage": 2.0, "speed": 120},
                 "spawn": {"death": ["Barbarians", 2]
                 }
             }
@@ -131,8 +144,10 @@
             "elixir": 4,
             "range": 1.2,
             "hit_speed": 0.9,
-            "speed": 2,
-            "placement_offset": 3.0,
+            "speed": 60,
+            "placement": {
+                "offset": 2.5
+            },
             "health": {
                 "11": 1800, "12": 1980, "13": 2178, "14": 2396, "15": 2636
             },
@@ -141,7 +156,7 @@
             },
             "ability": {
                 "type": "charge",
-                "charge": {"distance": [0, 5.5]},
+                "charge": {"distance": [0, 5.5], "speed": 120},
                 "elixir": 1,
                 "max_targets": 10,
                 "damage": {
@@ -154,7 +169,6 @@
             "elixir": 4,
             "range": 100,
             "speed": 600,
-            "placement_offset": 0.0,
             "damage": {
                 "9": 569, "10": 626, "11": 689, "12": 758, "13": 834, "14": 917, "15": 1009
             },
@@ -170,7 +184,6 @@
             "elixir": 2,
             "range": 100,
             "speed": 1600,
-            "placement_offset": 0.0,
             "damage": {
                 "9": 159, "10": 175, "11": 192, "12": 211, "13": 232, "14": 255, "15": 281
             },
@@ -188,7 +201,6 @@
             "elixir": 4,
             "range": 100,
             "speed": 1600,
-            "placement_offset": 3.5,
             "damage": {
                 "6": 57, "7": 63, "8": 69, "9": 76, "10": 83,
                 "11": 92, "12": 101, "13": 111, "14": 122, "15": 133
@@ -208,8 +220,10 @@
             "elixir": 5,
             "range": 1.2,
             "hit_speed": 1.5,
-            "speed": 1,
-            "placement_offset": 5.0,
+            "speed": 45,
+            "placement": {
+                "offset": 4.5
+            },
             "health": {
                 "6": 2556, "7": 2812, "8": 3084, "9": 3387, "10": 3723,
                 "11": 4090, "12": 4490, "13": 4937, "14": 5417, "15": 5944
@@ -224,8 +238,10 @@
             "elixir": 4,
             "range": 1.6,
             "hit_speed": 1.3,
-            "speed": 2,
-            "placement_offset": 4.0,
+            "speed": 60,
+            "placement": {
+                "offset": 3.0
+            },
             "health": {
                 "9": 750, "10": 824, "11": 906, "12": 994, "13": 1093, "14": 1200, "15": 1316
             },
@@ -235,18 +251,20 @@
             "ability": {
                 "type": "spawner",
                 "spawn": {
-                    "active": ["Bats", 2, 5],
-                    "death": ["Bats", 4]
+                    "active": ["Bat", 2, 5],
+                    "death": ["Bat", 4]
                 }
             }
         },
-        "Bats": {
+        "Bat": {
             "class": "mini",
-            "elixir": 2,
+            "elixir": 0.5,
             "range": 1.2,
             "hit_speed": 1.3,
-            "speed": 4,
-            "placement_offset": 2.0,
+            "speed": 120,
+            "placement": {
+                "offset": 2.0
+            },
             "health": {
                 "9": 67, "10": 74, "11": 81, "12": 89, "13": 98, "14": 108, "15": 119
             },
@@ -264,8 +282,10 @@
             "elixir": 5,
             "range": 0.1,
             "hit_speed": 2.0,
-            "speed": 2,
-            "placement_offset": 5.0,
+            "speed": 60,
+            "placement": {
+                "offset": 4.5
+            },
             "health": {
                 "6": 1049, "7": 1154, "8": 1266, "9": 1390, "10": 1528,
                 "11": 1679, "12": 1843, "13": 2027, "14": 2223, "15": 2440
@@ -287,8 +307,7 @@
             "class": "medspell",
             "elixir": 3,
             "range": 100,
-            "speed": "fast",
-            "placement_offset": 0.0,
+            "speed": 1100,
             "damage": {
                 "6": 228, "7": 252, "8": 276, "9": 303, "10": 333,
                 "11": 366, "12": 402, "13": 444, "14": 486, "15": 534
@@ -306,8 +325,10 @@
             "elixir": 4,
             "range": 1.2,
             "hit_speed": 1.3,
-            "speed": 2,
-            "placement_offset": 4.0,
+            "speed": 60,
+            "placement": {
+                "offset": 3.0
+            },
             "health": {
                 "6": 750, "7": 825, "8": 905, "9": 994, "10": 1092,
                 "11": 1200, "12": 1317, "13": 1449, "14": 1589, "15": 1744
@@ -318,9 +339,9 @@
             },
             "ability": {
                 "type": ["charge", "shield"],
-                "charge": {"damage": 2.0},
+                "charge": {"damage": 2.0, "speed": 120},
                 "splash": ["radius", 1.1],
-                "shield_health": {
+                "shield": {
                     "6": 150, "7": 165, "8": 181, "9": 199, "10": 219,
                     "11": 240, "12": 264, "13": 290, "14": 318, "15": 349
                 }
@@ -331,8 +352,10 @@
             "elixir": 3,
             "range": 6.0,
             "hit_speed": 3.0,
-            "speed": 3,
-            "placement_offset": 6.0,
+            "speed": 90,
+            "placement": {
+                "offset": 6.0
+            },
             "health": {
                 "6": 190, "7": 209, "8": 229, "9": 252, "10": 277,
                 "11": 304, "12": 334, "13": 367, "14": 403, "15": 442
@@ -386,8 +409,8 @@
         },
         "NightWitch": {
             "primary": ["RoyalGhost", "MagicArcher"],
-            "secondary": ["ElectroWizard", "Bandit"],
-            "spell": ["Zap"]
+            "secondary": ["ElectroWizard", "Bandit", "Zap"],
+            "spell": []
         }
     }
 }
