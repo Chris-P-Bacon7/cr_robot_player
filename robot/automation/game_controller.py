@@ -2,6 +2,7 @@ import pyautogui
 import time
 import random
 
+# Next steps: Implement drag and click and Bezier curves to bypass bot detection
 
 pyautogui.FAILSAFE = True
 
@@ -52,7 +53,6 @@ class GameController:
         
         sx, sy = self._get_global_coords(field_x, field_y)
         if sx:
-            pyautogui.moveTo(sx, sy, duration=random.uniform(0.15, 0.35))
-            
-        # time.sleep(random.uniform(0.1, 0.15)) 
+            pyautogui.moveTo(sx, sy, duration=random.uniform(0.10, 0.20))
+
         pyautogui.click()

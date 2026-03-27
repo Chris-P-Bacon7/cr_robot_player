@@ -1,3 +1,5 @@
+import cv2
+
 class ElixirTracker:
     def __init__(self, config):
         self.config = config
@@ -26,7 +28,7 @@ class ElixirTracker:
         # 2. Calculate Geometry
         # Width is Right - Left
         bar_width = right_x - left_x 
-        middle_y = int((top_y + bottom_y) / 2)
+        middle_y = int((top_y + bottom_y) * 0.5)
         
         # Distance between bubbles (9 gaps for 10 bubbles)
         dx = bar_width / 9
@@ -46,7 +48,11 @@ class ElixirTracker:
         Returns the highest point that is purple.
         """
         current_elixir = 0
-        h, w = frame.shape[:2]
+        
+        try:
+            h, w = frame.shape[:2]
+        except AttributeError:
+            return None
 
         # Loop through our pre-calculated points
         for i in range(1, 11):
@@ -67,10 +73,31 @@ class ElixirTracker:
             if self.is_purple(pixel):
                 current_elixir = i
             else:
-                # Optimization: If bubble 5 is empty, 6-10 are definitely empty.
-                break
+                if i == 1:
+                    gap = self.points[2][0] - self.points[1][0]
+                    prev_x = self.points[1][0] - gap
+                else:
+                    prev_x = self.points[i - 1][0]
+                
+                cur_x = self.points[i][0]
+                dx = (cur_x - prev_x) / 10.0
 
-        return current_elixir
+                fraction = 0.0
+
+                for j in range(1, 10):
+                    sub_x = int(prev_x + (dx * j))
+
+                    if sub_x >= w:
+                        continue
+                    
+                    sub_pixel = frame[py, sub_x]
+
+                    if self.is_blue(sub_pixel):
+                        fraction += 0.1
+
+                return round(current_elixir + fraction, 3)
+
+        return float(round(current_elixir, 3))
     
     def is_purple(self, pixel):
         """
@@ -80,10 +107,34 @@ class ElixirTracker:
         b, g, r = (int(pixel[0]), int(pixel[1]), int(pixel[2]))
 
         # Target Color (Pink/Purple)
-        if r > 120 and b > 120: # Ensures that the colour is bright enough
-            if g < 200 and r > (g + 25) and b > (g + 25):
+        if r > 90 and b > 90: # Ensures that the colour is bright enough
+            if r > (g + 15) and b > (g + 15):
                 # Allows the colour to be super bright (glow) or purple
                 # as long as it's not too bright or gray
                 return True
+            
+        # Ensures that if the elixir bar is full but glowing, it is still valid
+        if r > 220 and g > 220 and b > 220:
+            return True
         
+        return False
+    
+    def is_blue(self, pixel):
+        """
+        Detects the empty blue background of the elixir bar.
+        Target RGB: (51, 80, 160) -> Target OpenCV BGR: [160, 80, 51]
+        """
+        # Remember: OpenCV pixels are [Blue, Green, Red]
+        b, g, r = int(pixel[0]), int(pixel[1]), int(pixel[2])
+
+        # 1. The Tolerance Window
+        # We allow a +/- 30 margin around your target numbers to account for video blur
+        if 130 < b < 190 and 50 < g < 110 and 20 < r < 80:
+            
+            # 2. The Ratio Check
+            # Even if the numbers shift, it must maintain the core color profile: 
+            # Blue is the strongest, Green is in the middle, Red is the weakest.
+            if b > g and g > r:
+                return True
+                
         return False

@@ -31,15 +31,11 @@ class CardVision:
         if img is None:
             print(f"Error: Could not find image at '{image_path}'")
         else:
-            if evo_hero == 1:
-                self.templates[f"{name}_Evo"] = img
-                print(f"- Learned pattern: {name}, {full_path}")
-            elif evo_hero == 2:
-                self.templates[f"{name}_Hero"] = img
-                print(f"- Learned pattern: {name}, {full_path}")
-            else:
-                self.templates[name] = img
-                print(f"- Learned pattern: {name}, {full_path}")
+            if name not in self.templates:
+                self.templates[name] = []
+            
+            self.templates[name].append(img)
+            print(f"- Learned pattern: {name}, {full_path}")
 
     def find(self, haystack_img, template_name, threshold, debug_mode=False):
         """
@@ -49,41 +45,44 @@ class CardVision:
         if template_name not in self.templates:
             return []
 
-        needle_img = self.templates[template_name]
-        needle_w = needle_img.shape[1]
-        needle_h = needle_img.shape[0]
-
-        # 1. Run the matching algorithm
-        # TM_CCOEFF_NORMED is the best all-rounder. 1.0 = Perfect Match, 0.0 = No Match.
-
         frame = cv2.cvtColor(haystack_img, cv2.COLOR_BGR2GRAY)
-        template = cv2.cvtColor(needle_img, cv2.COLOR_BGR2GRAY)
-        result = cv2.matchTemplate(frame, template, cv2.TM_CCOEFF_NORMED)
 
-        # 2. Filter out weak matches
-        locations = np.where(result >= threshold)
-        locations = list(zip(*locations[::-1])) # Convert to (x, y) tuples
+        all_matches = []
 
-        # 3. Consolidate overlapping matches (Clean up the noise)
-        # (This is a simplified version. For now, we return all points)
-        rectangles = []
-        for loc in locations:
-            rect = [int(loc[0]), int(loc[1]), needle_w, needle_h]
-            # Add twice to allow grouping logic later (OpenCV requirement for groupRectangles)
-            rectangles.append(rect)
-            rectangles.append(rect)
+        for needle_img in self.templates[template_name]:
+            for scale in [1.0, 1.18]: # Check slightly smaller, normal, and slightly larger
+                width = int(needle_img.shape[1] * scale)
+                height = int(needle_img.shape[0] * scale)
+                resized_needle = cv2.resize(needle_img, (width, height))
 
-        # groupRectangles merges boxes that are right on top of each other
-        # eps=0.5 (grouping threshold), groupThreshold=1 (min number of overlaps)
-        rectangles, weights = cv2.groupRectangles(rectangles, groupThreshold=1, eps=0.5)
+                # 1. Run the matching algorithm
+                # TM_CCOEFF_NORMED is the best all-rounder. 1.0 = Perfect Match, 0.0 = No Match.
+                # Add this inside the 'for needle_img in self.templates[template_name]:' loop
+                template = cv2.cvtColor(resized_needle, cv2.COLOR_BGR2GRAY)
+                result = cv2.matchTemplate(frame, template, cv2.TM_CCOEFF_NORMED)
 
-        final_result = []
-        for (x, y, w, h) in rectangles:
-            try:
-                confidence = result[int(y), int(x)]
-            except IndexError:
-                print("Error in determining confidence.")
+                # 2. Filter out weak matches
+                locations = np.where(result >= threshold)
+                locations = list(zip(*locations[::-1]))
 
-            final_result.append(((x, y, w, h), confidence))
+                # 3. Consolidate overlapping matches (Clean up the noise)
+                rectangles = []
+                for loc in locations:
+                    rect = [int(loc[0]), int(loc[1]), width, height]
+                    # Add twice to allow grouping logic later (OpenCV requirement for groupRectangles)
+                    rectangles.append(rect)
+                    rectangles.append(rect)
 
-        return final_result
+                # groupRectangles merges boxes that are right on top of each other
+                # eps=0.5 (grouping threshold), groupThreshold=1 (min number of overlaps)
+                rectangles, weights = cv2.groupRectangles(rectangles, groupThreshold=1, eps=0.5)
+
+                for (x, y, w, h) in rectangles:
+                    try:
+                        confidence = result[int(y), int(x)]
+                    except IndexError:
+                        confidence = 0
+
+                    all_matches.append(((x, y, w, h), confidence))
+
+        return all_matches

@@ -1,0 +1,7 @@
+opencv-python>=4.8.0
+numpy>=1.24.0
+keyboard>=0.13.5
+onnxruntime>=1.16.0
+easyocr>=1.7.1
+torch>=2.0.0
+torchvision>=0.15.0

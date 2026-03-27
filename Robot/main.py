@@ -14,9 +14,9 @@ from automation.game_controller import GameController
 from perception.card_vision import CardVision
 from perception.elixir_tracker import ElixirTracker
 from perception.arena_vision import ArenaVision
-from automation.bot_logic import BotLogic
+from automation.placement_optimization import PlayAutomation
 from perception.screen_mapper import ScreenMapper
-from automation.score import Score
+from automation.game_state import GameState
 
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -122,7 +122,7 @@ def arena_ai_thread(detector, input_queue, output_queue):
                 except queue.Empty:
                     pass
 
-            results = list(detector.find_troops(frame))
+            results = list(detector.find_troops(frame, 0.700))
 
             if not output_queue.empty():
                 try: output_queue.get_nowait()
@@ -140,24 +140,16 @@ def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
         try:
             frame = input_queue.get(timeout=0.1)
             h_frame, w_frame = frame.shape[:2]
-            roi_top = int(h_frame * 0.86)
+            roi_top = int(h_frame * 0.85)
             hand_view = frame[roi_top:h_frame, 0:w_frame]
 
             raw_hand = []
             for card_name in deck_list:
                 matches = card_vision.find(hand_view, card_name, threshold=0.700)
-                
-                if os.path.exists(f"assets\\cards\\full_colour\\Card_{card_name}_Evo"):
-                    card_name = f"{card_name}_Evo"
-                    matches = card_vision.find(hand_view, card_name, threshold=0.700)
-                elif os.path.exists(f"assets\\cards\\full_colour\\Card_{card_name}_Hero"):
-                    card_name = f"{card_name}_Hero"
-                    matches = card_vision.find(hand_view, card_name, threshold=0.700)
-                
+
                 for ((x, y, w, h), score) in matches:
                     real_y = y + roi_top
                     raw_hand.append((card_name, (x, real_y, w, h), score))   
-                
             
             if not output_queue.empty():
                 try: output_queue.get_nowait()
@@ -169,7 +161,7 @@ def card_vision_thread(card_vision, deck_list, input_queue, output_queue):
         except Exception as e:
             print(f"Card Thread Error: {e}")
 
-def socre_vision_thread(score_tracker, input_queue, output_queue):
+def score_vision_thread(score_tracker, input_queue, output_queue):
     while True:
         try:
             frame = input_queue.get(timeout=0.1)
@@ -178,7 +170,8 @@ def socre_vision_thread(score_tracker, input_queue, output_queue):
                 try: frame = input_queue.get_nowait()
                 except queue.Empty: pass
             
-            health_data = score_tracker.tower_state(frame)
+            tower_state = score_tracker.tower_state(frame)
+            health_data = tower_state[0]
 
             if not output_queue.empty():
                 try: output_queue.get_nowait()
@@ -311,8 +304,8 @@ if __name__ == "__main__":
     bot_controls = GameController(cap)
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
-    bot_logic = BotLogic(decks[user])
-    score_tracker = Score(json_name, json_location)
+    bot_logic = PlayAutomation(decks[user])
+    score_tracker = GameState(json_name, json_location)
 
     arena_detector = ArenaVision("runs\\detect\\train7\\weights\\best.onnx")
     names_map = arena_detector.model.names
@@ -344,7 +337,7 @@ if __name__ == "__main__":
     print("Card Vision Thread Started.")
 
     score_thread = threading.Thread(
-        target=socre_vision_thread,
+        target=score_vision_thread,
         args=(score_tracker, score_input_queue, score_output_queue),
         daemon=True
     )
@@ -447,6 +440,7 @@ if __name__ == "__main__":
             # --- BOT VISION WINDOW ---
             try:
                 frame = cap.get_screenshot()
+                clean_frame = frame.copy()
             except Exception as e:
                 print(f"ERROR: Your Window: \"{window_name}\" is not open. Trying again.\n")
 
@@ -493,7 +487,7 @@ if __name__ == "__main__":
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             # --- ELIXIR TRACKING ---
-            if frame_count % 10 == 0 or frame_count == 1:
+            if frame_count % 5 == 0 or frame_count == 1:
                 current_elixir = elixir_tracker.get_elixir(frame)
 
             # --- ARENA DETECTION ---
@@ -511,57 +505,70 @@ if __name__ == "__main__":
             # Draw the arena results to keep the boxes on the screen
             arena_detector.draw_detections(frame, arena_results)
 
+            # --- SCORE ---
+            if frame_count % 30 == 0 and not score_input_queue.full():
+                score_input_queue.put(clean_frame)
+            
+            try:
+                new_scores = score_output_queue.get_nowait()
+                current_scores = new_scores
+            except queue.Empty:
+                pass
+            
+            # Evaluation Window
+            eval_frame = np.full((400, 300, 3), 30, dtype=np.uint8)
+            cv2.putText(eval_frame, "EVALUATION", (40, 30), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            
+            y_offset = 80
+            for tower_name, hp in current_scores.items():
+                display_name = tower_name.replace("_health", "").replace("_", " ").title()
+                hp_text = str(hp) if hp is not None else "???"
+                colour = (100, 100, 255) if "Enemy" in display_name else (255, 150, 50)
+
+                cv2.putText(eval_frame, f"{display_name}: {hp_text}", (20, y_offset), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, colour, 2)
+                
+                y_offset += 40
+            
+            cv2.imshow("Match Evaluation", eval_frame)
+            
             # --- BOT LOGIC ---
-            if len(arena_results) > 0 and not bot_state["is_acting"]: 
-                # Extract boxes
-                detections = arena_results[0].boxes
+            if not bot_state["is_acting"]: 
+                
+                # Safely extract boxes if they exist, otherwise pass an empty list
+                detections = arena_results[0].boxes if len(arena_results) > 0 else []
                 
                 # Ask the brain to make a move
                 move = bot_logic.get_best_move(detections, current_hand, current_elixir, names_map)
 
                 if move:
-                    target_name, (target_x, target_y), enemy = move
+                    target_name, (target_x, target_y), enemy_data = move
                     
-                    # Convert pixels to tiles
+                    # Convert pixels back to tiles for the action clicker
                     tile_x, tile_y = mapper.pixel_to_tile(target_x, target_y)
 
                     # Find which slot contains the card
                     slot_num = get_slot_from_name(target_name, current_hand, screen_config)
 
                     if slot_num:
-                        print(f"Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) to counter {enemy['Troop']} ({enemy['x']},{enemy['y']})).")
+                        action_reason = enemy_data['Troop']
+                        
+                        # Clean up the console logs based on Offense vs Defense
+                        if "Offensive Push" in action_reason or "Cycle" in action_reason:
+                            print(f"🕐 IDLE MOVE: Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) -> {action_reason}")
+                        else:
+                            enemy_x, enemy_y = mapper.pixel_to_tile(enemy_data['x'], enemy_data['y'])
+                            print(f"🛡️ DEFENDING: Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) "
+                                  f"to counter {action_reason} at ({enemy_x:.1f}, {enemy_y:.1f}) "
+                                    f"→ Evaluation (Threat Score: {move[2]['threat_score']:.1f}, ETA: {move[2]['eta']:.1f}).")
+                        
+                        bot_logic.commit_play(target_name, tile_x, tile_y)
                         threading.Thread(target=action_thread, args=(slot_num, (tile_x, tile_y))).start()
                     else:
-                        print(f"LOGIC ERROR: Wanted to play {target_name}, but couldn't find the slot.")
+                        print(f"LOGIC ERROR: Brain wanted to play {target_name}, but couldn't find the slot in hand.")
 
-            # # --- SCORE ---
-            # if frame_count % 30 == 0 and not score_input_queue.full():
-            #     score_input_queue.put(frame.copy())
-            
-            # try:
-            #     new_scores = score_output_queue.get_nowait()
-            #     current_scores = new_scores
-            # except queue.Empty:
-            #     pass
-            
-            # # Evaluation Window
-            # eval_frame = np.full((400, 300, 3), 30, dtype=np.uint8)
-            # cv2.putText(eval_frame, "EVALUATION", (40, 30), 
-            #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-            
-            # y_offset = 80
-            # for tower_name, hp in current_scores.items():
-            #     display_name = tower_name.replace("_health", "").replace("_", " ").title()
-            #     hp_text = str(hp) if hp is not None else "???"
-            #     colour = (100, 100, 255) if "Enemy" in display_name else (255, 150, 50)
 
-            #     cv2.putText(eval_frame, f"{display_name}: {hp_text}", (20, y_offset), 
-            #                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, colour, 2)
-                
-            #     y_offset += 40
-            
-            # cv2.imshow("Match Evaluation", eval_frame)
-            
 
             # --- DRAWING ON BOT VISION ---
             
