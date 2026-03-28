@@ -56,3 +56,4 @@ class GameController:
             pyautogui.moveTo(sx, sy, duration=random.uniform(0.10, 0.20))
 
         pyautogui.click()
+        time.sleep(0.1)

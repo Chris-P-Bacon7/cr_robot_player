@@ -41,6 +41,7 @@ decks = {
 
 json_name = "Chris_S25.json"
 json_location = f"robot\\{json_name}"
+db_json_name = "card_database.json"
 
 def typewriter(text):
         length = len(text)
@@ -186,7 +187,7 @@ def action_thread(slot, loc):
     bot_state["is_acting"] = True
     try:
         time.sleep(rand.uniform(0.05, 0.1))
-        bot_controls.play_card(f"card_{slot}", loc, screen_config, mapper)
+        bot_controls.play_card(f"card_{slot}", loc, screen_config, screen_mapper)
     except Exception as e:
         print(f"Action Failed: {e}.")
     bot_state["is_acting"] = False
@@ -300,12 +301,13 @@ if __name__ == "__main__":
 
     # Initialize all classes
     cap = WindowCapture(window_name, json_location)
-    mapper = ScreenMapper(screen_config, arena_height, arena_width)
+    screen_mapper = ScreenMapper(screen_config, arena_height, arena_width)
     bot_controls = GameController(cap)
     card_vision = CardVision()
     elixir_tracker = ElixirTracker(screen_config)
     bot_logic = PlayAutomation(decks[user])
-    score_tracker = GameState(json_name, json_location)
+    score_tracker = GameState(json_name, json_location, db_json_name, 
+                              f"robot\\{db_json_name}", screen_mapper)
 
     arena_detector = ArenaVision("runs\\detect\\train7\\weights\\best.onnx")
     names_map = arena_detector.model.names
@@ -394,27 +396,27 @@ if __name__ == "__main__":
     # Vertical Lines
     for x in range(arena_width):
         center_x = x + 0.5
-        p1 = mapper.tile_to_pixel(center_x, 0)
-        p2 = mapper.tile_to_pixel(center_x, arena_height)
+        p1 = screen_mapper.tile_to_pixel(center_x, 0)
+        p2 = screen_mapper.tile_to_pixel(center_x, arena_height)
         grid_lines.append(p1)
         grid_lines.append(p2)
         
         # Bottom numbers
         if x % 2 == 0:
-            px, py = mapper.tile_to_pixel(center_x, arena_height)
+            px, py = screen_mapper.tile_to_pixel(center_x, arena_height)
             text_labels.append((str(x), (px - 6, py - 8)))
 
     # Horizontal Lines
     for y in range(arena_height):
         center_y = y + 0.5
-        p1 = mapper.tile_to_pixel(0, center_y)
-        p2 = mapper.tile_to_pixel(arena_width, center_y)
+        p1 = screen_mapper.tile_to_pixel(0, center_y)
+        p2 = screen_mapper.tile_to_pixel(arena_width, center_y)
         grid_lines.append(p1)
         grid_lines.append(p2)
         
         # Side numbers
         if y % 2 == 0:
-            px, py = mapper.tile_to_pixel(0, center_y)
+            px, py = screen_mapper.tile_to_pixel(0, center_y)
             text_labels.append((str(y), (px + 5, py + 5)))
 
     # --- LOOPED ELEMENTS BEGIN HERE ---
@@ -546,7 +548,7 @@ if __name__ == "__main__":
                     target_name, (target_x, target_y), enemy_data = move
                     
                     # Convert pixels back to tiles for the action clicker
-                    tile_x, tile_y = mapper.pixel_to_tile(target_x, target_y)
+                    tile_x, tile_y = screen_mapper.pixel_to_tile(target_x, target_y)
 
                     # Find which slot contains the card
                     slot_num = get_slot_from_name(target_name, current_hand, screen_config)
@@ -558,7 +560,7 @@ if __name__ == "__main__":
                         if "Offensive Push" in action_reason or "Cycle" in action_reason:
                             print(f"🕐 IDLE MOVE: Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) -> {action_reason}")
                         else:
-                            enemy_x, enemy_y = mapper.pixel_to_tile(enemy_data['x'], enemy_data['y'])
+                            enemy_x, enemy_y = screen_mapper.pixel_to_tile(enemy_data['x'], enemy_data['y'])
                             print(f"🛡️ DEFENDING: Playing {target_name} (Slot {slot_num}) at Tile ({tile_x:.1f}, {tile_y:.1f}) "
                                   f"to counter {action_reason} at ({enemy_x:.1f}, {enemy_y:.1f}) "
                                     f"→ Evaluation (Threat Score: {move[2]['threat_score']:.1f}, ETA: {move[2]['eta']:.1f}).")
