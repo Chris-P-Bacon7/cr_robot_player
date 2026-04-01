@@ -9,7 +9,7 @@ import queue
 import random as rand
 import ctypes
 from concurrent.futures import ThreadPoolExecutor
-from perception.window_capture import WindowCapture 
+from perception.window_capture import WindowCapture
 from automation.game_controller import GameController
 from perception.card_vision import CardVision
 from perception.elixir_tracker import ElixirTracker
@@ -309,7 +309,7 @@ if __name__ == "__main__":
     score_tracker = GameState(json_name, json_location, db_json_name, 
                               f"robot\\{db_json_name}", screen_mapper)
 
-    arena_detector = ArenaVision("runs\\detect\\train7\\weights\\best.onnx")
+    arena_detector = ArenaVision("runs\\detect\\train10\\weights\\best.pt")
     names_map = arena_detector.model.names
 
     # Create Queues
@@ -354,7 +354,7 @@ if __name__ == "__main__":
     last_save_time = 0
     save_cooldown = 0.5
 
-    if "location" in raw_json:
+    if raw_json is not None and "location" in raw_json:
         for name, data in raw_json["location"].items():
             if len(data) >= 3:
                 tile_x, tile_y, trigger_key = data
@@ -382,10 +382,9 @@ if __name__ == "__main__":
             card_vision.load_template(card, cards_path, 2)
             num_cards += 1
 
-    
     # Initialize Window
     cv2.namedWindow("Bot Vision", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Bot Vision", 450, 954)
+    cv2.resizeWindow("Bot Vision", 625, 1325)
     cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 1) # Pushes window to front but prevents it
     cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 0) # from staying on top
 
@@ -442,6 +441,8 @@ if __name__ == "__main__":
             # --- BOT VISION WINDOW ---
             try:
                 frame = cap.get_screenshot()
+                if frame is None: continue
+                
                 clean_frame = frame.copy()
             except Exception as e:
                 print(f"ERROR: Your Window: \"{window_name}\" is not open. Trying again.\n")

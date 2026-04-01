@@ -14,7 +14,7 @@ if __name__ == "__main__":
     img_path = "assets\\raw_images\\Game_7\\clash_gameplay_3.png"
     print(f"Looking at {img_path}...")
     results = model(img_path)
-
+    
     print("Press 'q' to close the window")
 
     cv2.namedWindow("YOLO Vision", cv2.WINDOW_NORMAL)
