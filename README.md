@@ -1,12 +1,12 @@
-# cr_robot_player 🤖👑
+# cr_robot_player 🤖
 
 A real-time, autonomous AI agent that plays Clash Royale using advanced computer vision, kinematic threat evaluation, and a custom state-aware decision engine.
 
-> ⚠️ **Disclaimer:** Automated bots violate [Supercell's Terms of Service](https://supercell.com/en/terms-of-service/). This project is for **educational and engineering research purposes only**. Use on a burner account or a private emulator.
+> **Disclaimer:** Automated bots violate [Supercell's Terms of Service](https://supercell.com/en/terms-of-service/). This project is for **educational and engineering research purposes only**. Use on a burner account or a private emulator.
 
 ---
 
-## 🧠 How It Works
+## How It Works
 
 The bot operates on a high-speed, **multi-threaded pipeline**. To achieve superhuman reaction times without dropping frames, heavy AI workloads (like YOLO object detection and Optical Character Recognition) run asynchronously on background threads, feeding data to the main decision loop.
 
@@ -22,7 +22,7 @@ Screen Capture → [ YOLO Thread | Card Edge-Vision Thread | OCR Thread ]
 
 ---
 
-## 👀 Perception: Three Vision Systems
+## Perception: Three Vision Systems
 
 Instead of relying on basic color matching, the bot uses tailored computer vision techniques to bypass the game's dynamic lighting, shadows, and animations.
 
@@ -33,7 +33,7 @@ Instead of relying on basic color matching, the bot uses tailored computer visio
 
 ---
 
-## ⚙️ Cognition: The Decision Engine
+## Cognition: The Decision Engine
 
 The bot does not just react to whatever is closest — it calculates actual mathematical danger using a **Multivariate Kinematic Model**.
 
@@ -47,7 +47,7 @@ The bot does not just react to whatever is closest — it calculates actual math
 
 ---
 
-## 🦾 Execution: Geometry & Placement
+## Execution: Geometry & Placement
 
 1. **Coordinate Mapping:** YOLO pixel detections are transformed into an 18×30 isometric tile grid via `cv2.getPerspectiveTransform`.
 2. **Predictive Spell Aiming:** If defending with a spell (e.g., Fireball), the bot calculates the spell's flight time and the enemy troop's velocity to mathematically aim ahead of the moving target.
@@ -55,7 +55,7 @@ The bot does not just react to whatever is closest — it calculates actual math
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Library | Role |
 |---|---|
@@ -67,7 +67,7 @@ The bot does not just react to whatever is closest — it calculates actual math
 
 ---
 
-## 🚀 Setup & Installation
+## Setup & Installation
 
 ### 1. Install Dependencies
 
