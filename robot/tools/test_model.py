@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import cv2
 import os
 
-model_path = "runs\\detect\\train7\\weights\\best.pt"
+model_path = "runs\\detect\\train8\\weights\\best.pt"
 
 if __name__ == "__main__":
 
@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     model = YOLO(model_path)
 
-    img_path = "assets\\raw_images\\Game_7\\clash_gameplay_3.png"
+    img_path = "assets\\raw_images\\Game_4\\clash_gameplay_44.png"
     print(f"Looking at {img_path}...")
     results = model(img_path)
     

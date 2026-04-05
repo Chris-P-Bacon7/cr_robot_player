@@ -4,7 +4,7 @@ model: yolov8s.pt
 data: C:\Users\chris\Documents\GitHub\cr_robot_player\ClashRoyale-Bot-V1-10/data.yaml
 epochs: 300
 time: null
-patience: 30
+patience: 50
 batch: 16
 imgsz: 640
 save: true

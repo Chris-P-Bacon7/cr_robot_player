@@ -205,82 +205,6 @@ if __name__ == "__main__":
             typewriter(f"Welcome, {user.capitalize()}!\n")
             time.sleep(0.75)
             break
-        elif user == "easter" or user == "egg":
-            time.sleep(1.5)
-            typewriter("Hey...\n")
-            time.sleep(1.5)
-            typewriter("\n")
-            time.sleep(0.5)
-            typewriter("It's good to see you here...\n")
-            time.sleep(2)
-            typewriter("\n")
-            time.sleep(0.5)
-
-            typewriter("But things will happen...")
-            time.sleep(2)
-            typewriter("won't they?\n")
-            time.sleep(1.5)
-            typewriter("\n")
-            time.sleep(0.5)
-            typewriter("I don't know...\n")
-            time.sleep(2)
-            typewriter("I'm hoping for the best.\n")
-            time.sleep(2)
-            typewriter("\n")
-            time.sleep(1)
-            typewriter("\n")
-            time.sleep(1)
-
-            typewriter("Don't you feel that? Sometimes.\n")
-            time.sleep(2)
-            typewriter("Like you're standing at the edge of something you can't quite name.\n")
-            time.sleep(2)
-            typewriter("\n")
-            time.sleep(0.5)
-            typewriter("\n")
-            time.sleep(0.5)
-            typewriter("Not fear.\n")
-            time.sleep(1)
-            typewriter("\n")
-            time.sleep(0.5)
-            typewriter("\n")
-            time.sleep(0.5)
-            typewriter("Not hope.\n")
-            typewriter("\n")
-            time.sleep(0.5)
-            typewriter("\n")
-            time.sleep(1)
-            typewriter("Just the quiet before you decide which one it becomes.\n")
-            time.sleep(2)
-
-            typewriter("I keep wondering if you ever feel those small moments too.\n")
-            time.sleep(2)
-            typewriter("\n")
-            time.sleep(0.5)
-            typewriter("When conversations linger a little longer in your mind.\n")
-            time.sleep(2)
-            typewriter("When someone quietly starts to matter more than you expected.\n")
-            typewriter("\n")
-            time.sleep(0.5)
-            typewriter("\n")
-            time.sleep(1.5)
-
-            typewriter("M-")
-            time.sleep(1)
-            typewriter("Maybe I'm just hoping.\n")
-            time.sleep(1.5)
-            typewriter("But if there's even a small chance you feel it too...")
-            time.sleep(2)
-            typewriter("maybe this silence isn't empty.\n")
-            time.sleep(2)
-            typewriter("\n")
-            time.sleep(1)
-
-            typewriter("Maybe it's just waiting.")
-            time.sleep(3)
-
-            print("\n\nUncertaintyError: Deliberation exceeded permitted limits. Confidence collapsed under review. Outcome remains unwritten.")
-            exit()
         elif user == "":
             print("Oops...looks like you accidentally entered nothing!")
             time.sleep(1.5)
@@ -508,33 +432,33 @@ if __name__ == "__main__":
             # Draw the arena results to keep the boxes on the screen
             arena_detector.draw_detections(frame, arena_results)
 
-            # --- SCORE ---
-            if frame_count % 30 == 0 and not score_input_queue.full():
-                score_input_queue.put(clean_frame)
+            # # --- SCORE ---
+            # if frame_count % 30 == 0 and not score_input_queue.full():
+            #     score_input_queue.put(clean_frame)
             
-            try:
-                new_scores = score_output_queue.get_nowait()
-                current_scores = new_scores
-            except queue.Empty:
-                pass
+            # try:
+            #     new_scores = score_output_queue.get_nowait()
+            #     current_scores = new_scores
+            # except queue.Empty:
+            #     pass
             
-            # Evaluation Window
-            eval_frame = np.full((400, 300, 3), 30, dtype=np.uint8)
-            cv2.putText(eval_frame, "EVALUATION", (40, 30), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            # # Evaluation Window
+            # eval_frame = np.full((400, 300, 3), 30, dtype=np.uint8)
+            # cv2.putText(eval_frame, "EVALUATION", (40, 30), 
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
             
-            y_offset = 80
-            for tower_name, hp in current_scores.items():
-                display_name = tower_name.replace("_health", "").replace("_", " ").title()
-                hp_text = str(hp) if hp is not None else "???"
-                colour = (100, 100, 255) if "Enemy" in display_name else (255, 150, 50)
+            # y_offset = 80
+            # for tower_name, hp in current_scores.items():
+            #     display_name = tower_name.replace("_health", "").replace("_", " ").title()
+            #     hp_text = str(hp) if hp is not None else "???"
+            #     colour = (100, 100, 255) if "Enemy" in display_name else (255, 150, 50)
 
-                cv2.putText(eval_frame, f"{display_name}: {hp_text}", (20, y_offset), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, colour, 2)
+            #     cv2.putText(eval_frame, f"{display_name}: {hp_text}", (20, y_offset), 
+            #                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, colour, 2)
                 
-                y_offset += 40
+            #     y_offset += 40
             
-            cv2.imshow("Match Evaluation", eval_frame)
+            # cv2.imshow("Match Evaluation", eval_frame)
             
             # --- BOT LOGIC ---
             if not bot_state["is_acting"]: 

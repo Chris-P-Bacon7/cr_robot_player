@@ -31,7 +31,7 @@ if __name__ == '__main__':
             imgsz=640,
             batch=16, # Significantly increased batch size for the RTX 5070
             device=0, # Use the NVIDIA GPU for massive speedup
-            patience=30,
+            patience=50,
             plots=True
         )
     else:
@@ -43,7 +43,7 @@ if __name__ == '__main__':
             imgsz=640, # Image size
             batch=4, # How many to do at once (more = higher performance impact)
             device="cpu", # Forces Intel i7 to be used, increasing stability
-            patience=30, # Stop if no progress made after certain iterations
+            patience=50, # Stop if no progress made after certain iterations
             plots=True # Save training plots and charts
         )
 
