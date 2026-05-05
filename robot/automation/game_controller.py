@@ -1,6 +1,7 @@
 import pyautogui
 import time
 import random
+import keyboard
 
 # Next steps: Implement drag and click and Bezier curves to bypass bot detection
 
@@ -57,3 +58,9 @@ class GameController:
 
         pyautogui.click()
         time.sleep(0.1)
+        
+    def get_active_key(valid_keys):
+        for key in valid_keys:
+            if keyboard.is_pressed(key):
+                return key
+        return None

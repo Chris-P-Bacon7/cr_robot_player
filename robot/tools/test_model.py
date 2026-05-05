@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import cv2
 import os
 
-model_path = "runs\\detect\\train8\\weights\\best.pt"
+model_path = "runs\\detect\\train8w\\weights\\best.pt"
 
 if __name__ == "__main__":
 

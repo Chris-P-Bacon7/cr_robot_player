@@ -91,11 +91,17 @@
             1048
         ]
     },
+    "match_time": [
+        430,
+        24,
+        489,
+        53
+    ],
     "window": {
-        "top": 146,
-        "left": 1470,
-        "width": 428,
-        "height": 903
+        "top": 153,
+        "left": 1485,
+        "width": 407,
+        "height": 865
     },
     "location": {
         "bridge_left": [
