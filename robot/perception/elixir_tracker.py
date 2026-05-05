@@ -4,6 +4,7 @@ class ElixirTracker:
     def __init__(self, config):
         self.config = config
         self.points = {}
+        self.opponent_troops = []
         
         # Calculate the 10 points ONCE when the bot starts
         # This prevents doing math 60 times a second
@@ -124,7 +125,6 @@ class ElixirTracker:
         Detects the empty blue background of the elixir bar.
         Target RGB: (51, 80, 160) -> Target OpenCV BGR: [160, 80, 51]
         """
-        # Remember: OpenCV pixels are [Blue, Green, Red]
         b, g, r = int(pixel[0]), int(pixel[1]), int(pixel[2])
 
         # 1. The Tolerance Window

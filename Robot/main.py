@@ -17,6 +17,8 @@ from perception.arena_vision import ArenaVision
 from automation.placement_optimization import PlayAutomation
 from perception.screen_mapper import ScreenMapper
 from automation.game_state import GameState
+from tools.json_worker import JsonWorker
+from automation.play_strategy import PlayStrategy
 
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -42,6 +44,7 @@ decks = {
 json_name = "Chris_S25.json"
 json_location = f"robot\\{json_name}"
 db_json_name = "card_database.json"
+json_worker = JsonWorker(json_location, json_name)
 
 def typewriter(text):
         length = len(text)
@@ -58,32 +61,15 @@ def typewriter(text):
             
         return ""
 
-def load_json_config():
-    if not os.path.exists(json_location):
-        print(f"ERROR: \"{json_name}\" not found.")
-        return None
-    with open(json_location, "r") as f:
-        return json.load(f)
-
-def load_config():
-    if not os.path.exists(json_location):
-        print(f"ERROR: \"{json_name}\" not found.")
-        exit()
-        
-    with open(json_location, "r") as f:
-        data = json.load(f)
-        
-    config = {}
-    for k, v in data["arena"].items(): config[f"arena_{k}"] = tuple(v)
-    for k, v in data["card_slots"].items(): config[k] = tuple(v)
-    for k, v in data["elixir"].items(): config[f"elixir_{k}"] = tuple(v)
-    return config
+def time_calibration(time_data):
+    initial_time = time_data[0][0]
+    initial_match = time_data[0][1]
+    i = 1
     
-def get_active_key(valid_keys):
-    for key in valid_keys:
-        if keyboard.is_pressed(key):
-            return key
-    return None
+    while time_data[i][1] == initial_match:
+        i += 1
+    
+    return time_data[i][0] - initial_time     
 
 def get_slot_from_name(card_name, raw_hand, screen_config):
     # Find the card's vision data in hand
@@ -92,7 +78,7 @@ def get_slot_from_name(card_name, raw_hand, screen_config):
         if card[0] == card_name:
             target_card = card
             break
-
+ 
     if not target_card:
         return None # Report card not found in hand
     
@@ -220,8 +206,8 @@ if __name__ == "__main__":
             exit()
     
     # --- INITIALIZE EVERYTHING ELSE ---
-    screen_config = load_config()
-    raw_json = load_json_config()
+    screen_config = json_worker.config_json_coord(json_location, json_name)
+    raw_json = json_worker.load_json(json_location, json_name)
 
     # Initialize all classes
     cap = WindowCapture(window_name, json_location)
@@ -232,8 +218,9 @@ if __name__ == "__main__":
     bot_logic = PlayAutomation(decks[user])
     score_tracker = GameState(json_name, json_location, db_json_name, 
                               f"robot\\{db_json_name}", screen_mapper)
+    play_strategy = PlayStrategy(tuple(raw_json["match_time"]))
 
-    arena_detector = ArenaVision("runs\\detect\\train10\\weights\\best.pt")
+    arena_detector = ArenaVision("runs\\detect\\train7\\weights\\best.pt")
     names_map = arena_detector.model.names
 
     # Create Queues
@@ -308,7 +295,7 @@ if __name__ == "__main__":
 
     # Initialize Window
     cv2.namedWindow("Bot Vision", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Bot Vision", 625, 1325)
+    cv2.resizeWindow("Bot Vision", 400, 848)
     cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 1) # Pushes window to front but prevents it
     cv2.setWindowProperty("Bot Vision", cv2.WND_PROP_TOPMOST, 0) # from staying on top
 
@@ -350,6 +337,8 @@ if __name__ == "__main__":
         arena_results = [] # Persist results between frames
         persistent_hand = {}
         current_scores = {}
+        time_calibrated = False
+        both_times = []
         
         # --- INITIALIZE WINDOW POSITIONS ---
         cv2.namedWindow("Bot Vision")
@@ -416,7 +405,21 @@ if __name__ == "__main__":
             # --- ELIXIR TRACKING ---
             if frame_count % 5 == 0 or frame_count == 1:
                 current_elixir = elixir_tracker.get_elixir(frame)
-
+            
+            # --- MATCH STATE ---
+            if not time_calibrated: 
+                match_time = play_strategy.get_match_time(frame)
+            else:
+                try:
+                    match_time = time.time() - time_diff
+                except NameError:
+                    print("Match time not calibrated yet.")
+            both_times.append(tuple(time.time(), match_time))
+            
+            if len(both_times) == 100: 
+                time_diff = time_calibration(both_times)
+                time_calibrated = True
+            
             # --- ARENA DETECTION ---
             # 1. Send current frame to the AI (Non-blocking)
             if frame_count % 5 == 0 and not ai_input_queue.full():
@@ -431,34 +434,6 @@ if __name__ == "__main__":
             
             # Draw the arena results to keep the boxes on the screen
             arena_detector.draw_detections(frame, arena_results)
-
-            # # --- SCORE ---
-            # if frame_count % 30 == 0 and not score_input_queue.full():
-            #     score_input_queue.put(clean_frame)
-            
-            # try:
-            #     new_scores = score_output_queue.get_nowait()
-            #     current_scores = new_scores
-            # except queue.Empty:
-            #     pass
-            
-            # # Evaluation Window
-            # eval_frame = np.full((400, 300, 3), 30, dtype=np.uint8)
-            # cv2.putText(eval_frame, "EVALUATION", (40, 30), 
-            #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-            
-            # y_offset = 80
-            # for tower_name, hp in current_scores.items():
-            #     display_name = tower_name.replace("_health", "").replace("_", " ").title()
-            #     hp_text = str(hp) if hp is not None else "???"
-            #     colour = (100, 100, 255) if "Enemy" in display_name else (255, 150, 50)
-
-            #     cv2.putText(eval_frame, f"{display_name}: {hp_text}", (20, y_offset), 
-            #                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, colour, 2)
-                
-            #     y_offset += 40
-            
-            # cv2.imshow("Match Evaluation", eval_frame)
             
             # --- BOT LOGIC ---
             if not bot_state["is_acting"]: 
@@ -495,13 +470,15 @@ if __name__ == "__main__":
                     else:
                         print(f"LOGIC ERROR: Brain wanted to play {target_name}, but couldn't find the slot in hand.")
 
-
-
             # --- DRAWING ON BOT VISION ---
             
             # Drawing Current Elixir
             cv2.putText(frame, f"Elixir: {current_elixir}", (10, 800),
                         cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1, (210, 60, 210), 2, cv2.LINE_4)
+            
+            # Drawing Match Time
+            cv2.putText(frame, f"Match Time: {match_time}", (10, 1000), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
 
             # Draw Cached Grid Lines (Faster than calculating every frame)
             # We iterate by 2s since we stored p1, p2 sequentially

@@ -36,6 +36,8 @@ class CardVision:
             
             self.templates[name].append(img)
             print(f"- Learned pattern: {name}, {full_path}")
+    
+    
 
     def find(self, haystack_img, template_name, threshold, debug_mode=False):
         """
