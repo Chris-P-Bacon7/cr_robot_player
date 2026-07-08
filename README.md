@@ -1,5 +1,7 @@
 # cr_robot_player 🤖
 
+STILL IN DEVELOPMENT. DOES NOT WORK RELIABLY IN REAL-TIME PVP MATCHES YET.
+
 A real-time, autonomous AI agent that plays Clash Royale using advanced computer vision, kinematic threat evaluation, and a custom state-aware decision engine.
 
 > **Disclaimer:** Automated bots violate [Supercell's Terms of Service](https://supercell.com/en/terms-of-service/). This project is for **educational and engineering research purposes only**. Use on a burner account or a private emulator.
