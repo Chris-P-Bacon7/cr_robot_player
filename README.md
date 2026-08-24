@@ -1,6 +1,6 @@
 # cr_robot_player 🤖
 
-STILL IN DEVELOPMENT. DOES NOT WORK RELIABLY IN REAL-TIME PVP MATCHES YET.
+**YEAH...THIS THING'S NOT GOOD AT ALL EXCEPT AGAINST TRAINERS. WILL BE MAKING AN IMPROVED VERSION SOON. FOLLOW MY PROFILE FOR MORE UPDATES.**
 
 A real-time, autonomous AI agent that plays Clash Royale using advanced computer vision, kinematic threat evaluation, and a custom state-aware decision engine.
 
@@ -13,7 +13,7 @@ A real-time, autonomous AI agent that plays Clash Royale using advanced computer
 The bot operates on a high-speed, **multi-threaded pipeline**. To achieve superhuman reaction times without dropping frames, heavy AI workloads (like YOLO object detection and Optical Character Recognition) run asynchronously on background threads, feeding data to the main decision loop.
 
 ```text
-Screen Capture → [ YOLO Thread | Card Edge-Vision Thread | OCR Thread ]
+Screen Capture → [ YOLO Thread | Card Edge-Vision Tahread | OCR Thread ]
                                        ↓ (State Matrix)
                                     main.py (Game Loop)
                                        ↓ (Threat Score & Memory Check)
